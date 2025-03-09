@@ -7,14 +7,16 @@ class Block {
   previousHash: string;
   hash: string;
   nonce: number;
+  valid: boolean;
 
-  constructor(index: number, data: any, previousHash = "") {
+  constructor(data: any, index = 0, previousHash = "") {
     this.index = index;
     this.timestamp = new Date().toISOString();
     this.data = data;
     this.previousHash = previousHash;
     this.nonce = 0;
     this.hash = this.calculateHash();
+    this.valid = true;
   }
 
   calculateHash(): string {
@@ -38,54 +40,70 @@ class Block {
       this.hash = this.calculateHash();
     }
   }
+
+  get isValid() {
+    return;
+  }
 }
 
 class Blockchain {
-  chain: Block[];
+  private _chain: Block[];
   difficulty: number;
 
   constructor() {
-    this.chain = [this.createGenesisBlock()];
+    this._chain = [this.createGenesisBlock()];
     this.difficulty = 4;
   }
 
   private createGenesisBlock() {
-    return new Block(0, "Genesis Block", "0");
+    return new Block("Genesis Block", 0, "0");
   }
 
   getLatestBlock() {
-    return this.chain[this.chain.length - 1];
+    return this._chain[this._chain.length - 1];
   }
 
-  addBlock(newBlock: Block) {
+  createAndBlock(data: any): void {
+    const newBlock = new Block(data);
+    newBlock.index = this._chain.length;
     newBlock.previousHash = this.getLatestBlock().hash;
     newBlock.mine(this.difficulty);
-    this.chain.push(newBlock);
+    this._chain.push(newBlock);
+  }
+
+  addBlock(newBlock: Block): void {
+    newBlock.index = this._chain.length;
+    newBlock.previousHash = this.getLatestBlock().hash;
+    newBlock.mine(this.difficulty);
+    this._chain.push(newBlock);
   }
 
   isChainValid() {
-    for (let i = 0; i < this.chain.length; i++) {
-      const currentBlock = this.chain[i];
-      const previousBlock = this.chain[i - 1];
+    for (let i = 0; i < this._chain.length; i++) {
+      const currentBlock = this._chain[i];
+      const previousBlock = this._chain[i - 1];
 
       if (currentBlock.hash != currentBlock.calculateHash()) {
         return false;
       }
 
-      if (currentBlock.previousHash != previousBlock.hash) {
+      if (previousBlock && currentBlock.previousHash != previousBlock.hash) {
         return false;
       }
     }
     return true;
   }
+
+  get chain() {
+    return {
+      blocks: this._chain,
+      valid: this.isChainValid(),
+    };
+  }
+
+  get lenght() {
+    return this._chain.length;
+  }
 }
 
-// Example Usage
-const myBlockchain = new Blockchain();
-console.log("Mining block 1...");
-myBlockchain.addBlock(new Block(1, { amount: 10 }));
-
-console.log("Mining block 2...");
-myBlockchain.addBlock(new Block(2, { amount: 50 }));
-
-console.log(JSON.stringify(myBlockchain, null, 2));
+export { Blockchain, Block };

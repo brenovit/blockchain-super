@@ -11,14 +11,23 @@
     "url": "git+https://github.com/brenovit/blockchain-super.git"
   },
   "license": "ISC",
-  "author": "",
+  "author": "brenovit",
   "type": "commonjs",
   "main": "index.js",
   "scripts": {
-    "start": "bun index.ts",
+    "start": "npx ts-node src/server.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "devDependencies": {
-    "@types/node": "^22.13.10"
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.13.10",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.2"
+  },
+  "dependencies": {
+    "body-parser": "^1.20.3",
+    "cors": "^2.8.5",
+    "express": "^4.21.2"
   }
 }
