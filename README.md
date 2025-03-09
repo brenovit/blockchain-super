@@ -1,2 +1,8 @@
 # blockchain-super
-Blockchain simulation using https://github.com/anders94 projects as foundation
+Blockchain simulation
+
+# Execution
+
+Run npm install
+
+Run npm start
