@@ -55,3 +55,7 @@ npm start
    - **Dashboard** to visualize the blockchain.
    - **Send transactions** between users.
    - **Show the current network state** (connected nodes, chain status).
+
+# Inpiration
+
+This project was inpired by the projects [blockchain-demo](https://github.com/anders94/blockchain-demo) and [public-private-key-demo](https://github.com/anders94/public-private-key-demo) from [Anders Brownworth](https://andersbrownworth.com/)
