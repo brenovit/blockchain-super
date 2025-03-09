@@ -1,31 +1,28 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-
+	import { createBlock, getBlockchain } from '$lib/blockchain/blockchain-service';
+	import Block from '$lib/components/block/Block.svelte';
+	import type { BlockchainStatus } from '$lib/blockchain/model/blockchain';
 	let blockchain: any[] = [];
-	let blockChainValid = true;
+	let blockChainStatus: BlockchainStatus = { valid: true, errors: [] };
 	let data = '';
 	let loading = false;
 
 	async function fetchBlockchain() {
-		const res = await fetch('http://localhost:3001/blockchain');
-		const chain = await res.json();
-		blockchain = chain.blocks;
-		blockChainValid = chain.valid;
+		const res = await getBlockchain();
+		blockchain = res.chain;
+		blockChainStatus = res.status;
 	}
 
 	async function addBlock() {
 		if (!data) return;
 		loading = true;
 
-		await fetch('http://localhost:3001/add-block', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ data })
-		});
+		await createBlock(data);
 
 		data = '';
 		loading = false;
-		fetchBlockchain(); // Refresh blockchain
+		fetchBlockchain();
 	}
 
 	onMount(fetchBlockchain);
@@ -35,18 +32,24 @@
 	<h1 class="text-center">Blockchain Simulator</h1>
 
 	<div class="row mt-4">
-		<div class="col-md-6 offset-md-3">
-			{#if blockChainValid}
+		<div class="col-md">
+			{#if blockChainStatus.valid}
 				<div class="alert alert-success" role="alert">The chain is currently valid</div>
 			{:else}
 				<div class="alert alert-danger" role="alert">The chain is currently invalid</div>
+				<hr />
+				<ul class="list-group list-group-flush">
+					{#each blockChainStatus.errors as error}
+						<li class="list-group-item">{error}</li>
+					{/each}
+				</ul>
 			{/if}
 		</div>
 	</div>
 
 	<!-- Form to Add Blocks -->
 	<div class="row mt-4">
-		<div class="col-md-6 offset-md-3">
+		<div class="col-md-8 offset-md-2">
 			<div class="input-group">
 				<input type="text" bind:value={data} class="form-control" placeholder="Enter data..." />
 				<button class="btn btn-primary" on:click={addBlock} disabled={loading}>
@@ -59,18 +62,7 @@
 	<!-- Blockchain Display -->
 	<div class="row mt-3">
 		{#each blockchain as block}
-			<div class="col-md-6 offset-md-3 mb-3">
-				<div class="card">
-					<div class="card-body">
-						<h5 class="card-title">Block {block.index}</h5>
-						<p><strong>Nonce:</strong> {block.nonce}</p>
-						<p><strong>Timestamp:</strong> {block.timestamp}</p>
-						<p><strong>Data:</strong> {JSON.stringify(block.data)}</p>
-						<p><strong>Previous Hash:</strong> <small>{block.previousHash}</small></p>
-						<p><strong>Hash:</strong> <small>{block.hash}</small></p>
-					</div>
-				</div>
-			</div>
+			<Block {block} onBlockUpdated={fetchBlockchain} />
 		{/each}
 	</div>
 </div>
