@@ -1,26 +1,21 @@
 <script lang="ts">
-	import type { Block } from '$lib/blockchain/model/block';
-	import { mineBlock, updateBlock } from '$lib/blockchain/blockchain-service';
+	import type { Block } from '$lib/blockchain-server/model/block';
+	import { BlockchainServer } from '$lib/blockchain-server/blockchain-server';
+
+	const server = BlockchainServer.getInstance();
 
 	export let block: Block;
-	export let onBlockUpdated: (block: Block) => void = () => {};
 
 	$: valid_class = block.valid ? 'bg-success-subtle' : 'bg-danger-subtle';
 
 	let loading = false;
 
-	async function mine() {
-		loading = true;
-		await mineBlock(block.index);
-		onBlockUpdated(block);
-		loading = false;
+	function mine() {
+		server.mineBlock(block.index);
 	}
 
 	async function update() {
-		loading = true;
-		await updateBlock(block);
-		onBlockUpdated(block);
-		loading = false;
+		server.updateBlock(block);
 	}
 </script>
 
@@ -68,9 +63,28 @@
 
 			<!-- Data -->
 			<div class="mb-3 row">
-				<label class="col-sm-2 col-form-label" for="data">Data:</label>
-				<div class="col-sm-10">
-					<textarea id="data" class="form-control" rows="5" bind:value={block.data}></textarea>
+				<!-- Data ClientId -->
+				<div class="mb-3 row">
+					<label class="col-sm-2 col-form-label bold" for="data-clientId">ClientId:</label>
+					<div class="col-sm-10">
+						<div class="input-group">
+							<span class="input-group-text">@</span>
+							<input
+								id="data-clientId"
+								class="form-control"
+								bind:value={block.data.clientId}
+								disabled
+							/>
+						</div>
+					</div>
+				</div>
+				<!-- Data Data -->
+				<div class="mb-3 row">
+					<label class="col-sm-2 col-form-label" for="data-data">Data:</label>
+					<div class="col-sm-10">
+						<textarea id="data-data" class="form-control" rows="5" bind:value={block.data.data}
+						></textarea>
+					</div>
 				</div>
 			</div>
 

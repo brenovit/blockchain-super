@@ -1,35 +1,39 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { createBlock, getBlockchain } from '$lib/blockchain/blockchain-service';
 	import Block from '$lib/components/block/Block.svelte';
-	import type { BlockchainStatus } from '$lib/blockchain/model/blockchain';
+	import { BlockchainServer } from '$lib/blockchain-server/blockchain-server';
+	import type { BlockchainStatus } from '$lib/blockchain-server/model/blockchain';
+	import { blockchainStore, appStore } from '$lib/store';
+	import { onDestroy } from 'svelte';
+
+	const server = BlockchainServer.getInstance();
+
 	let blockchain: any[] = [];
 	let blockChainStatus: BlockchainStatus = { valid: true, errors: [] };
 	let data = '';
-	let loading = false;
+	let clientId = '';
 
-	async function fetchBlockchain() {
-		const res = await getBlockchain();
-		blockchain = res.chain;
-		blockChainStatus = res.status;
-	}
+	appStore.subscribe((value) => {
+		clientId = value.clientId;
+	});
+	blockchainStore.subscribe((value) => {
+		blockchain = value.chain;
+		blockChainStatus = value.status;
+	});
 
-	async function addBlock() {
+	function addBlock() {
 		if (!data) return;
-		loading = true;
 
-		await createBlock(data);
-
-		data = '';
-		loading = false;
-		fetchBlockchain();
+		server.createBlock(data);
 	}
 
-	onMount(fetchBlockchain);
+	onDestroy(() => {
+		server.disconnect();
+	});
 </script>
 
 <div class="container mt-5">
 	<h1 class="text-center">Blockchain Simulator</h1>
+	<h3>Your Client ID: <span class="badge text-bg-secondary">{clientId}</span></h3>
 
 	<div class="row mt-4">
 		<div class="col-md">
@@ -52,9 +56,7 @@
 		<div class="col-md-8 offset-md-2">
 			<div class="input-group">
 				<input type="text" bind:value={data} class="form-control" placeholder="Enter data..." />
-				<button class="btn btn-primary" on:click={addBlock} disabled={loading}>
-					{loading ? 'Mining...' : 'Add Block'}
-				</button>
+				<button class="btn btn-primary" on:click={addBlock}>'Add Block'</button>
 			</div>
 		</div>
 	</div>
@@ -62,7 +64,7 @@
 	<!-- Blockchain Display -->
 	<div class="row mt-3">
 		{#each blockchain as block}
-			<Block {block} onBlockUpdated={fetchBlockchain} />
+			<Block {block} />
 		{/each}
 	</div>
 </div>

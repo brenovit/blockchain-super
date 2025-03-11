@@ -1,7 +1,11 @@
+interface BlockData {
+	clientId: string;
+	data: any;
+}
 export interface Block {
 	index: number;
 	timestamp: string;
-	data: any;
+	data: BlockData;
 	previousHash: string;
 	hash: string;
 	nonce: number;
