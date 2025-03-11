@@ -1,5 +1,5 @@
 import crypto from "crypto";
-import { saveData, loadData } from "./db";
+import { StorageService } from "./storage-service";
 
 export class Blockchain {
   chain: Block[];
@@ -75,6 +75,7 @@ class BlockService {
 class BlockchainService {
   private _blockchain: Blockchain;
   private blockService: BlockService;
+  private storage: StorageService;
 
   private get chain() {
     return this._blockchain.chain;
@@ -84,7 +85,8 @@ class BlockchainService {
     return this._blockchain.difficulty;
   }
 
-  constructor() {
+  constructor(identifier: any) {
+    this.storage = new StorageService(identifier);
     this._blockchain = this.createOrLoadBlockchain();
     this.blockService = new BlockService(this.difficulty);
     if (this.chain.length === 0) {
@@ -94,7 +96,7 @@ class BlockchainService {
   }
 
   private createOrLoadBlockchain() {
-    const data = loadData();
+    const data = this.storage.loadData();
     if (data) {
       return data;
     } else {
@@ -204,7 +206,7 @@ class BlockchainService {
   }
 
   private saveChain() {
-    saveData(this._blockchain);
+    this.storage.saveData(this._blockchain);
   }
 
   get data() {
