@@ -1,6 +1,22 @@
 import crypto from "crypto";
+import { saveData, loadData } from "./db";
 
-class Block {
+interface Blockchain {
+  chain: Block[];
+  difficulty: number;
+}
+
+interface BlockData {
+  index: number;
+  timestamp: string;
+  data: any;
+  previousHash: string;
+  hash: string;
+  nonce: number;
+  valid: boolean;
+}
+
+class Block implements BlockData {
   index: number;
   timestamp: string;
   data: any;
@@ -49,13 +65,36 @@ class Block {
   }
 }
 
-class Blockchain {
-  private _chain: Block[];
-  difficulty: number;
+class BlockchainService {
+  //private _chain: Block[];
+  //difficulty: number;
+
+  private _blockchain: Blockchain;
+
+  private get chain() {
+    return this._blockchain.chain;
+  }
+
+  private get difficulty() {
+    return this._blockchain.difficulty;
+  }
 
   constructor() {
-    this._chain = [this.createGenesisBlock()];
-    this.difficulty = 4;
+    this._blockchain = this.createOrLoadBlockchain();
+  }
+
+  private createOrLoadBlockchain() {
+    const data = loadData();
+    if (data) {
+      return data;
+    } else {
+      this._blockchain = {
+        chain: [this.createGenesisBlock()],
+        difficulty: 2,
+      };
+      this.saveChain();
+      return this._blockchain;
+    }
   }
 
   private createGenesisBlock() {
@@ -63,50 +102,53 @@ class Blockchain {
   }
 
   getLatestBlock() {
-    return this._chain[this._chain.length - 1];
+    return this.chain[this.chain.length - 1];
   }
 
   createAndBlock(data: any): void {
     console.log("Creating block to add in the chain");
     const newBlock = new Block(data);
-    newBlock.index = this._chain.length;
+    newBlock.index = this.chain.length;
     newBlock.previousHash = this.getLatestBlock().hash;
     newBlock.mine(this.difficulty);
-    this._chain.push(newBlock);
+    this.chain.push(newBlock);
     console.log("Block created and added");
 
     console.log("<=><=><=><=><=><=><=><=><=><=>");
-    console.log(this._chain);
+    console.log(this.chain);
     console.log("<=><=><=><=><=><=><=><=><=><=>");
+    this.saveChain();
   }
 
   addBlock(newBlock: Block): void {
     console.log("Adding block to the chain");
-    newBlock.index = this._chain.length;
+    newBlock.index = this.chain.length;
     newBlock.previousHash = this.getLatestBlock().hash;
     newBlock.mine(this.difficulty);
-    this._chain.push(newBlock);
+    this.chain.push(newBlock);
     console.log("Block added");
 
     console.log("<=><=><=><=><=><=><=><=><=><=>");
-    console.log(this._chain);
+    console.log(this.chain);
     console.log("<=><=><=><=><=><=><=><=><=><=>");
+    this.saveChain();
   }
 
   mineBlock(index: number) {
     console.log("Mining block: " + index);
-    const block = this._chain[index];
+    const block = this.chain[index];
     block.mine(this.difficulty);
     console.log("Block mined");
 
     console.log("<=><=><=><=><=><=><=><=><=><=>");
-    console.log(this._chain);
+    console.log(this.chain);
     console.log("<=><=><=><=><=><=><=><=><=><=>");
+    this.saveChain();
   }
 
   updateBlock(payload: any) {
     console.log("Updating block: " + payload.index);
-    const block = this._chain[payload.index];
+    const block = this.chain[payload.index];
     block.nonce = payload.nonce;
     block.data = payload.data;
     block.previousHash = payload.previousHash;
@@ -114,15 +156,16 @@ class Blockchain {
     console.log("Block updated");
 
     console.log("<=><=><=><=><=><=><=><=><=><=>");
-    console.log(this._chain);
+    console.log(this.chain);
     console.log("<=><=><=><=><=><=><=><=><=><=>");
+    this.saveChain();
   }
 
   getChainStatus() {
     const errors: string[] = [];
-    for (let i = 0; i < this._chain.length; i++) {
-      const currentBlock = this._chain[i];
-      const previousBlock = this._chain[i - 1];
+    for (let i = 0; i < this.chain.length; i++) {
+      const currentBlock = this.chain[i];
+      const previousBlock = this.chain[i - 1];
 
       if (!currentBlock.valid) {
         errors.push(
@@ -144,16 +187,20 @@ class Blockchain {
     };
   }
 
+  private saveChain() {
+    saveData(this._blockchain);
+  }
+
   get data() {
     return {
-      chain: this._chain,
+      chain: this.chain,
       status: this.getChainStatus(),
     };
   }
 
   get lenght() {
-    return this._chain.length;
+    return this.chain.length;
   }
 }
 
-export { Blockchain, Block };
+export { BlockchainService, Blockchain, BlockData };

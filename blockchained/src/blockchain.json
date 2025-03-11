@@ -1,0 +1,32 @@
+{
+  "chain": [
+    {
+      "index": 0,
+      "timestamp": "2025-03-11T19:39:35.580Z",
+      "data": "Genesis Block",
+      "previousHash": "0",
+      "nonce": 0,
+      "hash": "f501f0fa275b387d60f910cf4ace330bae738d9d5d29f0f3792914abc0ee1f47",
+      "valid": true
+    },
+    {
+      "index": 1,
+      "timestamp": "2025-03-11T19:42:51.091Z",
+      "data": "Teste123",
+      "previousHash": "f501f0fa275b387d60f910cf4ace330bae738d9d5d29f0f3792914abc0ee1f47",
+      "nonce": 44,
+      "hash": "007cef41788507f8d24c21c84e2cf382060fa56c1cd9c469aeee0bf123ab0522",
+      "valid": true
+    },
+    {
+      "index": 2,
+      "timestamp": "2025-03-11T19:43:03.842Z",
+      "data": "Data",
+      "previousHash": "007cef41788507f8d24c21c84e2cf382060fa56c1cd9c469aeee0bf123ab0522",
+      "nonce": 82,
+      "hash": "0058d1b7ab66335c219f3315a1b5e1ffc1e1363fb118a09087503163c74d955a",
+      "valid": true
+    }
+  ],
+  "difficulty": 2
+}

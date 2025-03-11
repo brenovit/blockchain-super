@@ -1,10 +1,10 @@
 import express from "express";
 import cors from "cors";
 import bodyParser from "body-parser";
-import { Blockchain } from "./index";
+import { BlockchainService } from "./index";
 
 const app = express();
-const blockchain = new Blockchain();
+const blockchain = new BlockchainService();
 
 app.use(cors());
 app.use(bodyParser.json());
