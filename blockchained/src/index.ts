@@ -1,75 +1,80 @@
 import crypto from "crypto";
 import { saveData, loadData } from "./db";
 
-interface Blockchain {
+export class Blockchain {
   chain: Block[];
   difficulty: number;
+
+  constructor(chain: Block[], difficulty = 2) {
+    this.chain = chain;
+    this.difficulty = difficulty;
+  }
 }
 
 interface BlockData {
-  index: number;
-  timestamp: string;
+  clientId: string;
   data: any;
-  previousHash: string;
-  hash: string;
-  nonce: number;
-  valid: boolean;
 }
 
-class Block implements BlockData {
+class Block {
   index: number;
   timestamp: string;
-  data: any;
+  data: BlockData;
   previousHash: string;
-  hash: string;
+  hash: string = "";
   nonce: number;
   valid: boolean;
 
-  constructor(data: any, index = 0, previousHash = "") {
+  constructor(data: BlockData, index = 0, previousHash = "") {
     this.index = index;
     this.timestamp = new Date().toISOString();
     this.data = data;
     this.previousHash = previousHash;
     this.nonce = 0;
-    this.hash = this.calculateHash();
     this.valid = true;
   }
+}
 
-  calculateHash(): string {
+class BlockService {
+  private difficulty: number;
+  constructor(difficulty: number) {
+    this.difficulty = difficulty;
+  }
+
+  calculateHash({
+    index,
+    timestamp,
+    data,
+    previousHash,
+    nonce,
+  }: Block): string {
     return crypto
       .createHash("sha256")
-      .update(
-        this.index +
-          this.timestamp +
-          JSON.stringify(this.data) +
-          this.previousHash +
-          this.nonce
-      )
+      .update(index + timestamp + JSON.stringify(data) + previousHash + nonce)
       .digest("hex");
   }
 
-  mine(difficult: number): void {
-    this.nonce = 0;
-    this.hash = this.calculateHash();
+  mine(block: Block): void {
+    block.nonce = 0;
+    block.hash = this.calculateHash(block);
     while (
-      this.hash.substring(0, difficult) != Array(difficult + 1).join("0")
+      block.hash.substring(0, this.difficulty) !=
+      Array(this.difficulty + 1).join("0")
     ) {
-      this.nonce++;
-      this.hash = this.calculateHash();
+      block.nonce++;
+      block.hash = this.calculateHash(block);
     }
-    this.checkValid();
+    this.checkValid(block);
   }
 
-  checkValid() {
-    this.valid = this.hash == this.calculateHash();
+  checkValid(block: Block) {
+    block.valid = block.hash == this.calculateHash(block);
   }
 }
 
 class BlockchainService {
-  //private _chain: Block[];
-  //difficulty: number;
-
   private _blockchain: Blockchain;
+  private blockService: BlockService;
 
   private get chain() {
     return this._blockchain.chain;
@@ -81,6 +86,11 @@ class BlockchainService {
 
   constructor() {
     this._blockchain = this.createOrLoadBlockchain();
+    this.blockService = new BlockService(this.difficulty);
+    if (this.chain.length === 0) {
+      this._blockchain.chain = [this.createGenesisBlock()];
+    }
+    this.saveChain();
   }
 
   private createOrLoadBlockchain() {
@@ -88,17 +98,17 @@ class BlockchainService {
     if (data) {
       return data;
     } else {
-      this._blockchain = {
-        chain: [this.createGenesisBlock()],
+      return {
+        chain: [],
         difficulty: 2,
       };
-      this.saveChain();
-      return this._blockchain;
     }
   }
 
   private createGenesisBlock() {
-    return new Block("Genesis Block", 0, "0");
+    const block = new Block({ clientId: "0", data: "Genesis Block" }, 0, "0");
+    block.hash = this.blockService.calculateHash(block);
+    return block;
   }
 
   getLatestBlock() {
@@ -110,7 +120,7 @@ class BlockchainService {
     const newBlock = new Block(data);
     newBlock.index = this.chain.length;
     newBlock.previousHash = this.getLatestBlock().hash;
-    newBlock.mine(this.difficulty);
+    this.blockService.mine(newBlock);
     this.chain.push(newBlock);
     console.log("Block created and added");
 
@@ -124,7 +134,7 @@ class BlockchainService {
     console.log("Adding block to the chain");
     newBlock.index = this.chain.length;
     newBlock.previousHash = this.getLatestBlock().hash;
-    newBlock.mine(this.difficulty);
+    this.blockService.mine(newBlock);
     this.chain.push(newBlock);
     console.log("Block added");
 
@@ -137,7 +147,7 @@ class BlockchainService {
   mineBlock(index: number) {
     console.log("Mining block: " + index);
     const block = this.chain[index];
-    block.mine(this.difficulty);
+    this.blockService.mine(block);
     console.log("Block mined");
 
     console.log("<=><=><=><=><=><=><=><=><=><=>");
@@ -147,12 +157,16 @@ class BlockchainService {
   }
 
   updateBlock(payload: any) {
-    console.log("Updating block: " + payload.index);
+    console.log("Updating block: " + JSON.stringify(payload));
     const block = this.chain[payload.index];
+    if (!block) {
+      console.log("Block not found");
+      return;
+    }
     block.nonce = payload.nonce;
     block.data = payload.data;
     block.previousHash = payload.previousHash;
-    block.checkValid();
+    this.blockService.checkValid(block);
     console.log("Block updated");
 
     console.log("<=><=><=><=><=><=><=><=><=><=>");
@@ -171,7 +185,9 @@ class BlockchainService {
         errors.push(
           `The block #${
             currentBlock.index
-          } is invalid. Calculated hash: ${currentBlock.calculateHash()}`
+          } is invalid. Calculated hash: ${this.blockService.calculateHash(
+            currentBlock
+          )}`
         );
       }
 
@@ -203,4 +219,4 @@ class BlockchainService {
   }
 }
 
-export { BlockchainService, Blockchain, BlockData };
+export { BlockchainService };
