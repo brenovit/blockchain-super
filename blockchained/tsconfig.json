@@ -1,12 +1,17 @@
 {
   "compilerOptions": {
-    "target": "es2016",
-    "module": "commonjs",
+    "module": "NodeNext",
+    "target": "ESNext",
+    "moduleResolution": "NodeNext",
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
+    "allowJs": true,
+
     "skipLibCheck": true,
     "outDir": "./dist",
     "rootDir": "./src"
-  }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules"]
 }

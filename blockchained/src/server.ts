@@ -1,10 +1,10 @@
 import { WebSocketServer, WebSocket } from "ws";
-import { BlockchainService } from "./index";
+import { BlockchainService } from "./blockchain-service.js";
 import { v4 as uuidv4 } from "uuid"; // Import UUID generator
 import express from "express";
 import cors from "cors";
 import bodyParser from "body-parser";
-import { Logger } from "./logger";
+import { Logger } from "./logger.js";
 const DEFAULT_PORT = 5000;
 
 let blockchain: BlockchainService;
@@ -44,7 +44,7 @@ function startWebSocketServer(port: number) {
           discoverPeer(event.data.peerUrl);
           break;
         case "CREATE_BLOCK":
-          blockchain.createAndBlock({
+          blockchain.createAndAddBlock({
             data: event.data,
             clientId: event.clientId,
           });

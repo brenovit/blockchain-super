@@ -12,11 +12,13 @@
   },
   "license": "ISC",
   "author": "brenovit",
-  "type": "commonjs",
-  "main": "index.js",
+  "type": "module",
   "scripts": {
-    "start": "npx ts-node src/server.ts",
-    "start:custom": "start --port",
+    "build": "tsc",
+    "start": "node dist/p2pServer.js",
+    "dev": "tsc && node dist/p2pServer.js",
+    "socket": "npx ts-node src/server.ts",
+    "socket:custom": "socket --port",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "devDependencies": {
@@ -28,9 +30,15 @@
     "typescript": "^5.8.2"
   },
   "dependencies": {
+    "@chainsafe/libp2p-gossipsub": "^14.1.0",
+    "@chainsafe/libp2p-noise": "^16.0.3",
+    "@chainsafe/libp2p-yamux": "^7.0.1",
+    "@libp2p/identify": "^3.0.26",
+    "@libp2p/websockets": "^9.2.7",
     "body-parser": "^1.20.3",
     "cors": "^2.8.5",
     "express": "^4.21.2",
+    "libp2p": "^2.8.1",
     "uuid": "^11.1.0",
     "ws": "^8.18.1"
   }

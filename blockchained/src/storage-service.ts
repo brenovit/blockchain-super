@@ -1,7 +1,11 @@
 import * as fs from "fs";
 import * as path from "path";
-import { Blockchain } from ".";
-import { Logger } from "./logger";
+import { Blockchain } from "./blockchain-service.js";
+import { Logger } from "./logger.js";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export class StorageService {
   identifier: string;

@@ -1,5 +1,5 @@
 import crypto from "crypto";
-import { StorageService } from "./storage-service";
+import { StorageService } from "./storage-service.js";
 
 export class Blockchain {
   chain: Block[];
@@ -117,7 +117,7 @@ class BlockchainService {
     return this.chain[this.chain.length - 1];
   }
 
-  createAndBlock(data: any): void {
+  createAndAddBlock(data: any): Block {
     console.log("Creating block to add in the chain");
     const newBlock = new Block(data);
     newBlock.index = this.chain.length;
@@ -130,6 +130,7 @@ class BlockchainService {
     console.log(this.chain);
     console.log("<=><=><=><=><=><=><=><=><=><=>");
     this.saveChain();
+    return newBlock;
   }
 
   addBlock(newBlock: Block): void {
@@ -221,4 +222,4 @@ class BlockchainService {
   }
 }
 
-export { BlockchainService };
+export { BlockchainService, Block };

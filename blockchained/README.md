@@ -20,7 +20,12 @@ Install all dependencies
 npm install
 ```
 
-Then start the node on default port 5000
+Compile the project since it uses ESModule
+```
+npm run build
+```
+
+Then start the node
 
 ```
 npm start
