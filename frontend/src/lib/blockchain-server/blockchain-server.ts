@@ -12,7 +12,7 @@ export class BlockchainServer {
 
 	connect() {
 		if (typeof window !== 'undefined') {
-			this.socket = new WebSocket('ws://localhost:3002');
+			this.socket = new WebSocket('ws://localhost:5000');
 			this.socket.onopen = () => console.log('✅ WebSocket opened');
 			this.socket.onclose = () => console.log('❌ WebSocket closed');
 			this.socket.onmessage = (message) => {
