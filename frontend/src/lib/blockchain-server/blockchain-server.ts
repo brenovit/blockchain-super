@@ -71,6 +71,5 @@ export class BlockchainServer {
 
 	disconnect() {
 		this.socket?.close();
-		console.log('❌ WebSocket disconnected');
 	}
 }

@@ -21,7 +21,7 @@ export class StorageService {
   saveData = (data: Blockchain): void => {
     try {
       fs.writeFileSync(this.filePath, JSON.stringify(data, null, 2), "utf-8");
-      Logger.debug(`${this.fileName} written successfully`);
+      Logger.trace(`${this.fileName} written successfully`);
     } catch (error) {
       Logger.error(`Error writing data: ${JSON.stringify(error)}`);
     }
@@ -31,7 +31,7 @@ export class StorageService {
   loadData = (): Blockchain | null => {
     try {
       if (!fs.existsSync(this.filePath)) {
-        Logger.debug(`${this.fileName} file not found!`);
+        Logger.trace(`${this.fileName} file not found!`);
         return null;
       }
 
