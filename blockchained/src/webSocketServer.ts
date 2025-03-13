@@ -1,15 +1,10 @@
 import { WebSocketServer, WebSocket } from "ws";
 import { BlockchainService } from "./blockchain-service.js";
-import { v4 as uuidv4 } from "uuid"; // Import UUID generator
-import express from "express";
-import cors from "cors";
-import bodyParser from "body-parser";
 import { Logger } from "./logger.js";
+
 const DEFAULT_PORT = 5000;
 
 let blockchain: BlockchainService;
-
-const clients = new Map<string, WebSocket>(); // Store clients with their unique IDs
 
 const argPort = process.argv.slice(2)[0] ?? DEFAULT_PORT;
 
@@ -166,16 +161,3 @@ function broadcastBlockchain() {
   });
   peers.forEach((peer) => peer.send(message));
 }
-
-const app = express();
-app.use(cors());
-app.use(bodyParser.json());
-app.get("/blockchain", (req, res) => {
-  res.json(blockchain.data);
-});
-const HTTP_PORT = WSS_PORT - 2000;
-app.listen(HTTP_PORT, () => {
-  Logger.debug(
-    `Blockchain HTTP server running on http://localhost:${HTTP_PORT}/blockchain`
-  );
-});
