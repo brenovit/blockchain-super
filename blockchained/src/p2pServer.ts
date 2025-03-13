@@ -6,6 +6,8 @@ import { yamux } from "@chainsafe/libp2p-yamux";
 import { Logger } from "./logger.js";
 import { Block, BlockchainService } from "./blockchain-service.js";
 import { identify } from "@libp2p/identify";
+import { mdns } from "@libp2p/mdns";
+import { kadDHT } from "@libp2p/kad-dht";
 
 (async () => {
   const node = await createLibp2p({
@@ -15,6 +17,7 @@ import { identify } from "@libp2p/identify";
     transports: [webSockets()],
     connectionEncrypters: [noise()],
     streamMuxers: [yamux()],
+    peerDiscovery: [mdns()],
     services: {
       pubsub: gossipsub(),
       indentify: identify(),
@@ -57,20 +60,31 @@ import { identify } from "@libp2p/identify";
 
   function broadcastBlock(block: Block) {
     Logger.info("📡 Broadcasting new block...");
-    node.services.pubsub.publish(
-      "blockchain",
-      new TextEncoder().encode(JSON.stringify({ type: "ADD_BLOCK", block }))
-    );
+    try {
+      node.services.pubsub.publish(
+        "blockchain",
+        new TextEncoder().encode(JSON.stringify({ type: "ADD_BLOCK", block }))
+      );
+    } catch (error) {
+      Logger.error(`Error broadcasting block: ${error}`);
+    }
   }
 
   Logger.info(`🌍 Listening for blockchain messages...`);
 
+  node.addEventListener("peer:discovery", (event) => {
+    console.log(`🔍 Discovered new peer: ${event.detail.id.toString()}`);
+    node
+      .dial(event.detail.id)
+      .catch((err) => console.error("❌ Failed to connect to peer:", err));
+  });
+
   // Add a test block every 10 seconds for demonstration
-  setInterval(() => {
+  /*setInterval(() => {
     Logger.debug("⛏️ Mining new block...");
     const newBlock = blockchain.createAndAddBlock(
       "Test data " + new Date().toISOString()
     );
     broadcastBlock(newBlock);
-  }, 10000);
+  }, 10000);*/
 })();
