@@ -1,17 +1,20 @@
 export class Logger {
   static log(
     message: string,
-    level: "DEBUG" | "INFO" | "WARN" | "ERROR" = "INFO"
+    level: "TRACE" | "DEBUG" | "INFO" | "WARN" | "ERROR" = "INFO"
   ) {
     const timestamp = new Date().toISOString(); // Format: YYYY-MM-DDTHH:mm:ss.sssZ
     let color;
 
     switch (level) {
-      case "INFO":
-        color = "\x1b[32m"; // Green
+      case "TRACE":
+        color = "\x1b[37m"; // White
         break;
       case "DEBUG":
-        color = "\x1b[30m"; // ?
+        color = "\x1b[34m"; // Blue
+        break;
+      case "INFO":
+        color = "\x1b[32m"; // Green
         break;
       case "WARN":
         color = "\x1b[33m"; // Yellow
@@ -24,6 +27,14 @@ export class Logger {
     console.log(`${color}[${timestamp}] [${level}] ${message}\x1b[0m`);
   }
 
+  static trace(message: string) {
+    this.log(message, "TRACE");
+  }
+
+  static debug(message: string) {
+    this.log(message, "DEBUG");
+  }
+
   static info(message: string) {
     this.log(message, "INFO");
   }
@@ -34,9 +45,5 @@ export class Logger {
 
   static error(message: string) {
     this.log(message, "ERROR");
-  }
-
-  static debug(message: string) {
-    this.log(message, "DEBUG");
   }
 }
