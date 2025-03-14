@@ -7,19 +7,7 @@ import { Logger } from "./logger.js";
 import { Block, BlockchainService } from "./blockchain-service.js";
 import { identify } from "@libp2p/identify";
 import { mdns } from "@libp2p/mdns";
-
-type Event = {
-  type: EventType | undefined;
-  data: any;
-};
-
-type EventType =
-  | "MASTER_ANNOUNCEMENT"
-  | "ADD_BLOCK"
-  | "ELECTION"
-  | "BLOCKCHAIN"
-  | "CREATE_BLOCK"
-  | "MINE_BLOCK";
+import { NodeEvent } from "./node-event.js";
 
 const INITIAL_ID = 1;
 const argId = process.argv.slice(2)[0] ?? INITIAL_ID;
@@ -56,18 +44,17 @@ let currentMasterId: string | null = null; // Stores the current master node ID
   // Subscribe to topics
   node.services.pubsub.subscribe(BLOCKCHAIN_TOPIC);
   node.services.pubsub.subscribe(ELECTION_TOPIC);
+  node.services.pubsub.addEventListener("message", handleEvent);
 
-  node.services.pubsub.addEventListener("message", (message) => {
+  Logger.info(`🌍 Listening for blockchain messages...`);
+
+  function handleEvent(message: any) {
     const event = JSON.parse(
       new TextDecoder().decode(message.detail.data)
-    ) as Event;
+    ) as NodeEvent;
 
     Logger.trace(`📩 Received event: ${JSON.stringify(event, null, 1)}`);
 
-    handleEvent(event);
-  });
-
-  function handleEvent(event: Event) {
     switch (event.type) {
       case "MASTER_ANNOUNCEMENT":
         handleMasterAnnouncement(event.data);
@@ -102,25 +89,33 @@ let currentMasterId: string | null = null; // Stores the current master node ID
     safePublish(BLOCKCHAIN_TOPIC, { type: "ADD_BLOCK", data: block });
   }
 
-  Logger.info(`🌍 Listening for blockchain messages...`);
-
   node.addEventListener("peer:discovery", (event) => {
-    Logger.debug(`🔍 Discovered new peer: ${event.detail.id.toString()}`);
-    node
-      .dial(event.detail.id)
-      .catch((err) => Logger.error(`❌ Failed to connect to peer: ${err}`));
+    Logger.debug(`🔍 Discovered new peer: ${event.detail.id}`);
+    peerDiscovery(event.detail.id);
   });
+
+  async function peerDiscovery(peerId: any) {
+    await node
+      .dial(peerId)
+      .catch((err) => Logger.error(`❌ Failed to connect to peer: ${err}`));
+
+    broadcastBlockchain();
+    checkIfMasterNode(peerId.toString());
+  }
+
+  function broadcastBlockchain() {
+    Logger.trace("📡 Broadcasting blockchain...");
+    safePublish(BLOCKCHAIN_TOPIC, {
+      type: "BLOCKCHAIN",
+      data: blockchain.data,
+    });
+  }
 
   node.addEventListener("peer:disconnect", (event) => {
     const peerId = event.detail.toString();
     Logger.debug(`❌ Peer disconnected: ${peerId}`);
     checkIfMasterNode(peerId);
   });
-
-  function handleMasterAnnouncement(masterId: any) {
-    currentMasterId = masterId;
-    Logger.info(`👑 Master Node is now: ${currentMasterId}`);
-  }
 
   function checkIfMasterNode(peerId: string) {
     if (currentMasterId === peerId) {
@@ -130,6 +125,11 @@ let currentMasterId: string | null = null; // Stores the current master node ID
       currentMasterId = null;
       startElection();
     }
+  }
+
+  function handleMasterAnnouncement(masterId: any) {
+    currentMasterId = masterId;
+    Logger.info(`👑 Master Node is now: ${currentMasterId}`);
   }
 
   function handleElection(electId: any) {
@@ -168,7 +168,7 @@ let currentMasterId: string | null = null; // Stores the current master node ID
     }, 3000); // Wait 3 seconds to ensure no other node claims master first
   }
 
-  function safePublish(topic: string, message: Event) {
+  async function safePublish(topic: string, message: NodeEvent) {
     const peersSubscribed = node.services.pubsub.getSubscribers(topic);
 
     if (peersSubscribed.length === 0) {
@@ -180,10 +180,11 @@ let currentMasterId: string | null = null; // Stores the current master node ID
       Logger.trace(
         `📡 Publishing to ${topic} : ${JSON.stringify(message, null, 2)}`
       );
-      node.services.pubsub.publish(
+      await node.services.pubsub.publish(
         topic,
         new TextEncoder().encode(JSON.stringify(message))
       );
+      Logger.trace(`📡 Published to ${topic}`);
     } catch (error) {
       Logger.error(`❌ Error publishing to ${topic}: ${error}`);
     }
