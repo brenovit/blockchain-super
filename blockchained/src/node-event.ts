@@ -1,9 +1,10 @@
 export type NodeEvent = {
   type: NodeEventType | undefined;
-  data: any;
+  data?: any;
 };
 
 export type NodeEventType =
+  | "REQUEST_SYNC_BLOCKCHAIN"
   | "MASTER_ANNOUNCEMENT"
   | "ADD_BLOCK"
   | "ELECTION"

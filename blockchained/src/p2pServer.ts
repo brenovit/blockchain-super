@@ -42,8 +42,8 @@ let currentMasterId: string | null = null; // Stores the current master node ID
   let blockchain = new BlockchainService(nodeId);
 
   // Subscribe to topics
-  node.services.pubsub.subscribe(BLOCKCHAIN_TOPIC);
-  node.services.pubsub.subscribe(ELECTION_TOPIC);
+  await node.services.pubsub.subscribe(BLOCKCHAIN_TOPIC);
+  await node.services.pubsub.subscribe(ELECTION_TOPIC);
   node.services.pubsub.addEventListener("message", handleEvent);
 
   Logger.info(`🌍 Listening for blockchain messages...`);
@@ -56,6 +56,9 @@ let currentMasterId: string | null = null; // Stores the current master node ID
     Logger.trace(`📩 Received event: ${JSON.stringify(event, null, 1)}`);
 
     switch (event.type) {
+      case "REQUEST_SYNC_BLOCKCHAIN":
+        broadcastBlockchain();
+        break;
       case "MASTER_ANNOUNCEMENT":
         handleMasterAnnouncement(event.data);
         break;
@@ -67,6 +70,7 @@ let currentMasterId: string | null = null; // Stores the current master node ID
         break;
       case "ADD_BLOCK":
         blockchain.addBlock(event.data);
+        broadcastBlockchain();
         break;
       case "CREATE_BLOCK":
         const newBlock = blockchain.createAndAddBlock({
@@ -74,6 +78,7 @@ let currentMasterId: string | null = null; // Stores the current master node ID
           clientId: "2",
         });
         broadcastBlock(newBlock);
+        broadcastBlockchain();
         break;
       case "MINE_BLOCK":
         blockchain.mineBlock(event.data);
@@ -99,7 +104,7 @@ let currentMasterId: string | null = null; // Stores the current master node ID
       .dial(peerId)
       .catch((err) => Logger.error(`❌ Failed to connect to peer: ${err}`));
 
-    broadcastBlockchain();
+    //broadcastBlockchain();
     checkIfMasterNode(peerId.toString());
   }
 
@@ -168,26 +173,40 @@ let currentMasterId: string | null = null; // Stores the current master node ID
     }, 3000); // Wait 3 seconds to ensure no other node claims master first
   }
 
-  async function safePublish(topic: string, message: NodeEvent) {
-    const peersSubscribed = node.services.pubsub.getSubscribers(topic);
+  async function safePublish(
+    topic: string,
+    message: any,
+    maxRetries = 3,
+    delay = 1500
+  ) {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      const peers = node.services.pubsub.getSubscribers(topic);
 
-    if (peersSubscribed.length === 0) {
-      Logger.warn(`⚠️  No peers subscribed to ${topic}. Skipping publish.`);
-      return;
+      if (peers.length > 0) {
+        try {
+          Logger.info(`📡 Publishing to ${topic} (Attempt ${attempt})`);
+          await node.services.pubsub.publish(
+            topic,
+            new TextEncoder().encode(JSON.stringify(message))
+          );
+          return;
+        } catch (error) {
+          Logger.error(`❌ Error publishing (Attempt ${attempt}): ${error}`);
+        }
+      } else {
+        Logger.warn(
+          `⚠️ No peers subscribed to ${topic}. Attemp ${attempt}/${maxRetries} Retrying in ${
+            delay / 1000
+          } seconds...`
+        );
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, delay));
     }
 
-    try {
-      Logger.trace(
-        `📡 Publishing to ${topic} : ${JSON.stringify(message, null, 2)}`
-      );
-      await node.services.pubsub.publish(
-        topic,
-        new TextEncoder().encode(JSON.stringify(message))
-      );
-      Logger.trace(`📡 Published to ${topic}`);
-    } catch (error) {
-      Logger.error(`❌ Error publishing to ${topic}: ${error}`);
-    }
+    Logger.error(
+      `❌ Failed to publish to ${topic} after ${maxRetries} attempts.`
+    );
   }
 
   setInterval(() => {

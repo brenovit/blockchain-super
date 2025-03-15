@@ -32,7 +32,9 @@ const BLOCKCHAIN_TOPIC = "blockchain";
   Logger.info(`🚀 libp2p Node started: ${node.peerId.toString()}`);
 
   // ✅ Step 2: Subscribe to libp2p blockchain events
-  node.services.pubsub.subscribe(BLOCKCHAIN_TOPIC);
+  await node.services.pubsub.subscribe(BLOCKCHAIN_TOPIC);
+  Logger.info(`📡 Subscribed to blockchain topic`);
+
   node.services.pubsub.addEventListener("message", handleEvent);
 
   function handleEvent(message: any) {
@@ -40,11 +42,7 @@ const BLOCKCHAIN_TOPIC = "blockchain";
       new TextDecoder().decode(message.detail.data)
     ) as Event;
 
-    Logger.info(
-      `📩 Received event from topic ${BLOCKCHAIN_TOPIC}: ${JSON.stringify(
-        event
-      )}`
-    );
+    Logger.info(`📩 Received event from node: ${JSON.stringify(event)}`);
 
     notifyWebSocketClients(event);
   }
@@ -80,11 +78,20 @@ const BLOCKCHAIN_TOPIC = "blockchain";
       Logger.info("❌ WebSocket client disconnected!");
       wsClients = wsClients.filter((client) => client !== ws);
     });
+    safePublish(BLOCKCHAIN_TOPIC, {
+      type: "REQUEST_SYNC_BLOCKCHAIN",
+      data: 1,
+    });
   }
 
   function handleWebSocketClientMessage(message: WebSocket.RawData) {
     const event = JSON.parse(message.toString());
+    Logger.info(`📩 Received event from client: ${JSON.stringify(event)}`);
+
     switch (event.type) {
+      case "SYNC_BLOCKCHAIN":
+        safePublish(BLOCKCHAIN_TOPIC, { type: "REQUEST_SYNC_BLOCKCHAIN" });
+        break;
       case "MINE_BLOCK":
         safePublish(BLOCKCHAIN_TOPIC, event);
         break;
@@ -103,13 +110,17 @@ const BLOCKCHAIN_TOPIC = "blockchain";
     const peersSubscribed = node.services.pubsub.getSubscribers(topic);
 
     if (peersSubscribed.length === 0) {
-      Logger.warn(`⚠️  No peers subscribed to ${topic}. Skipping publish.`);
+      Logger.warn(`⚠️ No peers subscribed to [${topic}]. Skipping publish.`);
       return;
     }
 
     try {
       Logger.trace(
-        `📡 Publishing to ${topic} : ${JSON.stringify(message, null, 2)}`
+        `📡 Publishing to topic [${topic}] : ${JSON.stringify(
+          message,
+          null,
+          2
+        )}`
       );
       await node.services.pubsub.publish(
         topic,
