@@ -17,7 +17,7 @@ export class BlockchainServer {
 			this.socket.onclose = () => console.log('❌ WebSocket closed');
 			this.socket.onmessage = (message) => {
 				const event = JSON.parse(message.data);
-				console.log('📩 Received event:', event);
+				console.log(`📩 Received event: ${event}`);
 				switch (event.type) {
 					case ServerMessageType.blockchain:
 						blockchainStore.set(event.data);
