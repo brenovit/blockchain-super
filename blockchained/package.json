@@ -14,7 +14,7 @@
   "author": "brenovit",
   "type": "module",
   "scripts": {
-    "build": "tsc",
+    "build": "rm -rf dist && tsc",
     "start": "node dist/p2pServer.js",
     "start:custom": "start --name",
     "client": "rm -rf dist && tsc && node dist/p2pClient.js",

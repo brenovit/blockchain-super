@@ -3,44 +3,51 @@ Blockchain simulatior with multiple nodes running on container(docker) using P2P
 
 # Repo
 
-The repository contains:
-
-- the blockchain service (blockchained)
-- 
+This repository contains the blockchain service (blockchained) with the websocket client to be used in the FE.
+  
 # Technologies & Stack
 - Backend (Blockchain & P2P)
-  - TypeScript (Node.js)
-  - WebSockets (ws package and libp2p)
-  - Redis (optional)
+- TypeScript (Node.js)
+- WebSocket/libp2p (Client)
+- libp2p (Server)
 
-# Execution
+# Set Up
 
 Install all dependencies
 ```
 npm install
 ```
 
-Compile the project since it uses ESModule
+Compile the project since
 ```
 npm run build
 ```
+## Execution
 
-Then start the node
+### Server
+
+To start the server node with default id 1
 
 ```
 npm start
 ```
 
-Or start the node on explicity
+Or start the server with choosen id
 ```
 npm start --id 1
 ```
 
-Or compile and run using
+To compile the code and start the server
+```
+node run server
+```
+### Client
 
+To compile the code and start the WebSocket client
 ```
-npm run dev
+node run client
 ```
+
 # Plan
 
 1. Core Blockchain
