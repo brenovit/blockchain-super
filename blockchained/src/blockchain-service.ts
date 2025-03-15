@@ -25,9 +25,14 @@ class Block {
   nonce: number;
   valid: boolean;
 
-  constructor(data: BlockData, index = 0, previousHash = "") {
+  constructor(
+    data: BlockData,
+    index = 0,
+    timestamp = new Date().toISOString(),
+    previousHash = ""
+  ) {
     this.index = index;
-    this.timestamp = new Date().toISOString();
+    this.timestamp = timestamp;
     this.data = data;
     this.previousHash = previousHash;
     this.nonce = 0;
@@ -72,13 +77,27 @@ class BlockService {
   }
 }
 
+const FIXED_GENESIS_BLOCK = {
+  index: 0,
+  timestamp: "1997-23-01T15:40:00.000Z", // ✅ Fixed timestamp
+  data: { clientId: "genesis", data: "Genesis Block" }, // ✅ Consistent data
+  previousHash: "0",
+  nonce: 0,
+  hash: "FIXED_HASH", // ✅ Precomputed hash
+};
+
 class BlockchainService {
   private _blockchain: Blockchain;
+
   private blockService: BlockService;
   private storage: StorageService;
 
   private get chain() {
     return this._blockchain.chain;
+  }
+
+  private set chain(chain: Block[]) {
+    this._blockchain.chain = chain;
   }
 
   private get difficulty() {
@@ -89,10 +108,6 @@ class BlockchainService {
     this.storage = new StorageService(identifier);
     this._blockchain = this.createOrLoadBlockchain();
     this.blockService = new BlockService(this.difficulty);
-    if (this.chain.length === 0) {
-      this._blockchain.chain = [this.createGenesisBlock()];
-    }
-    this.saveChain();
   }
 
   private createOrLoadBlockchain() {
@@ -108,9 +123,25 @@ class BlockchainService {
   }
 
   private createGenesisBlock() {
-    const block = new Block({ clientId: "0", data: "Genesis Block" }, 0, "0");
+    const block = new Block(
+      FIXED_GENESIS_BLOCK.data,
+      FIXED_GENESIS_BLOCK.index,
+      FIXED_GENESIS_BLOCK.timestamp,
+      FIXED_GENESIS_BLOCK.previousHash
+    );
     block.hash = this.blockService.calculateHash(block);
     return block;
+  }
+
+  startChain() {
+    if (this.chain.length === 0) {
+      this._blockchain.chain = [this.createGenesisBlock()];
+      this.saveChain();
+    }
+  }
+
+  loadChainFromNetwork(chain: Block[]) {
+    this.chain = chain;
   }
 
   getLatestBlock() {
@@ -157,6 +188,7 @@ class BlockchainService {
     console.log(this.chain);
     console.log("<=><=><=><=><=><=><=><=><=><=>");
     this.saveChain();
+    return block;
   }
 
   updateBlock(payload: any) {
