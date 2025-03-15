@@ -17,8 +17,8 @@
     "build": "tsc",
     "start": "node dist/p2pServer.js",
     "start:custom": "start --name",
-    "socket": "node dist/p2pWebSocket.js",
-    "dev": "tsc && node dist/p2pServer.js",
+    "client": "rm -rf dist && tsc && node dist/p2pClient.js",
+    "server": "rm -rf dist && tsc && node dist/p2pServer.js",
     "socketServer": "npx ts-node src/server.ts",
     "socketServer:custom": "socket --port",
     "test": "echo \"Error: no test specified\" && exit 1"
