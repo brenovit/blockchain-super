@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import { StorageService } from "./storage-service.js";
+import { Logger } from "./logger.js";
 
 export class Blockchain {
   chain: Block[];
@@ -142,6 +143,7 @@ class BlockchainService {
 
   loadChainFromNetwork(chain: Block[]) {
     this.chain = chain;
+    this.saveChain();
   }
 
   getLatestBlock() {
@@ -149,65 +151,63 @@ class BlockchainService {
   }
 
   createAndAddBlock(data: any): Block {
-    console.log("Creating block to add in the chain");
+    Logger.info("Creating block to add in the chain");
     const newBlock = new Block(data);
     newBlock.index = this.chain.length;
     newBlock.previousHash = this.getLatestBlock().hash;
     this.blockService.mine(newBlock);
     this.chain.push(newBlock);
-    console.log("Block created and added");
+    Logger.info("Block created and added");
 
-    console.log("<=><=><=><=><=><=><=><=><=><=>");
-    console.log(this.chain);
-    console.log("<=><=><=><=><=><=><=><=><=><=>");
+    this.logChain();
     this.saveChain();
     return newBlock;
   }
 
   addBlock(newBlock: Block): void {
-    console.log("Adding block to the chain");
+    Logger.info("Adding block to the chain");
     newBlock.index = this.chain.length;
     newBlock.previousHash = this.getLatestBlock().hash;
     this.blockService.mine(newBlock);
     this.chain.push(newBlock);
-    console.log("Block added");
+    Logger.info("Block added");
 
-    console.log("<=><=><=><=><=><=><=><=><=><=>");
-    console.log(this.chain);
-    console.log("<=><=><=><=><=><=><=><=><=><=>");
+    this.logChain();
     this.saveChain();
   }
 
   mineBlock(index: number) {
-    console.log("Mining block: " + index);
+    Logger.info("Mining block: " + index);
     const block = this.chain[index];
     this.blockService.mine(block);
-    console.log("Block mined");
+    Logger.info("Block mined");
 
-    console.log("<=><=><=><=><=><=><=><=><=><=>");
-    console.log(this.chain);
-    console.log("<=><=><=><=><=><=><=><=><=><=>");
+    this.logChain();
     this.saveChain();
     return block;
   }
 
   updateBlock(payload: any) {
-    console.log("Updating block: " + JSON.stringify(payload));
+    Logger.info("Updating block: " + JSON.stringify(payload));
     const block = this.chain[payload.index];
     if (!block) {
-      console.log("Block not found");
+      Logger.info("Block not found");
       return;
     }
     block.nonce = payload.nonce;
     block.data = payload.data;
     block.previousHash = payload.previousHash;
     this.blockService.checkValid(block);
-    console.log("Block updated");
+    Logger.info("Block updated");
 
+    this.logChain();
+    this.saveChain();
+  }
+
+  private logChain() {
     console.log("<=><=><=><=><=><=><=><=><=><=>");
     console.log(this.chain);
     console.log("<=><=><=><=><=><=><=><=><=><=>");
-    this.saveChain();
   }
 
   getChainStatus() {

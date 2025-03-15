@@ -41,14 +41,14 @@ const BLOCKCHAIN_TOPIC = "blockchain";
   function handleEvent(message: any) {
     const event = JSON.parse(
       new TextDecoder().decode(message.detail.data)
-    ) as Event;
+    ) as NodeEvent;
 
-    Logger.info(`📩 Received event from node: ${JSON.stringify(event)}`);
+    Logger.info(`📩 Received event from node: ${event.type} : ${event.id}`);
 
     notifyWebSocketClients(event);
   }
 
-  function notifyWebSocketClients(event: Event) {
+  function notifyWebSocketClients(event: NodeEvent) {
     console.log("📡 Notifying WebSocket clients...");
     wsClients.forEach((client) => {
       client.send(JSON.stringify(event));

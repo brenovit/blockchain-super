@@ -58,13 +58,13 @@ type MessageId = string | null;
     ) as NodeEvent;
 
     if (event.id && receivedEventIds.has(event.id)) {
-      Logger.trace(`⚠️ Ignoring duplicate event: ${event.id}`);
+      Logger.trace(`⚠️ Ignoring duplicated event: ${event.type} : ${event.id}`);
       return;
     }
     if (event.id) {
       receivedEventIds.add(event.id);
     }
-    Logger.trace(`📩 Received event: ${JSON.stringify(event, null, 1)}`);
+    Logger.trace(`📩 Received event: ${event.type} : ${event.id}`);
 
     switch (event.type) {
       case "MASTER_ANNOUNCEMENT":
@@ -88,12 +88,10 @@ type MessageId = string | null;
           data: event.data,
           clientId: "2",
         });
-        broadcastBlock(newBlock);
         broadcastBlockchain();
         break;
       case "MINE_BLOCK":
         const minedBlock = blockchain.mineBlock(event.data);
-        broadcastBlock(minedBlock);
         broadcastBlockchain();
         break;
       case "BLOCKCHAIN":
@@ -119,7 +117,7 @@ type MessageId = string | null;
       .catch((err) => Logger.error(`❌ Failed to connect to peer: ${err}`));
 
     //broadcastBlockchain();
-    checkIfMasterNode(peerId.toString());
+    //checkIfMasterNode(peerId.toString());
   }
 
   function broadcastBlockchain() {
@@ -150,6 +148,10 @@ type MessageId = string | null;
     setNodeAsMaster(masterId);
     if (isMaster) {
       blockchain.startChain();
+      safePublish(BLOCKCHAIN_TOPIC, {
+        type: "BLOCKCHAIN_UPDATE",
+        data: blockchain.data.chain,
+      });
     }
   }
 
@@ -219,7 +221,7 @@ type MessageId = string | null;
       if (peers.length > 0) {
         try {
           Logger.debug(
-            `📡 Publishing to ${topic} (Attemp ${attempt}/${maxRetries}`
+            `📡 Publishing to topic [${topic}] | ${event.type} : ${event.id} | Attemp: ${attempt}/${maxRetries}`
           );
           return await node.services.pubsub.publish(
             topic,
@@ -227,12 +229,12 @@ type MessageId = string | null;
           );
         } catch (error) {
           Logger.error(
-            `❌ Error publishing (Attemp ${attempt}/${maxRetries}): ${error}`
+            `❌ Error publishing on attemp ${attempt}/${maxRetries}: ${error}`
           );
         }
       } else {
         Logger.warn(
-          `⚠️ No peers subscribed to ${topic}. (Attemp ${attempt}/${maxRetries}). Retrying in ${
+          `⚠️ No peers subscribed to ${topic}. Attemp ${attempt}/${maxRetries}. Retrying in ${
             delay / 1000
           } seconds...`
         );
