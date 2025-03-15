@@ -24,6 +24,8 @@
 		if (!data) return;
 
 		server.createBlock(data);
+
+		data = '';
 	}
 
 	onDestroy(() => {

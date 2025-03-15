@@ -17,14 +17,17 @@ export class BlockchainServer {
 			this.socket.onclose = () => console.log('❌ WebSocket closed');
 			this.socket.onmessage = (message) => {
 				const event = JSON.parse(message.data);
-				if (event.type === ServerMessageType.blockchain) {
-					blockchainStore.set(event.data);
-				}
-				if (event.type === ServerMessageType.clientId) {
-					appStore.set({
-						clientId: event.data
-					});
-					this.clientId = event.data;
+				console.log('📩 Received event:', event);
+				switch (event.type) {
+					case ServerMessageType.blockchain:
+						blockchainStore.set(event.data);
+						break;
+					case ServerMessageType.clientId:
+						appStore.set({
+							clientId: event.data
+						});
+						this.clientId = event.data;
+						break;
 				}
 			};
 
