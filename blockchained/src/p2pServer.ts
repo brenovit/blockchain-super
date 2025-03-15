@@ -7,7 +7,8 @@ import { Logger } from "./logger.js";
 import { Block, BlockchainService } from "./blockchain-service.js";
 import { identify } from "@libp2p/identify";
 import { mdns } from "@libp2p/mdns";
-import { NodeEvent } from "./node-event.js";
+import { NodeEvent, NodeMessage } from "./node-event.js";
+import crypto from "crypto";
 
 const INITIAL_ID = 1;
 const argId = process.argv.slice(2)[0] ?? INITIAL_ID;
@@ -20,6 +21,7 @@ const ELECTION_TOPIC = "leader-election";
 
 let isMaster = false; // Tracks if the node is master
 let currentMasterId: string | null = null; // Stores the current master node ID
+type MessageId = string | null;
 
 (async () => {
   const node = await createLibp2p({
@@ -39,6 +41,7 @@ let currentMasterId: string | null = null; // Stores the current master node ID
   await node.start();
   const myId = node.peerId.toString();
   Logger.info(`🚀 libp2p Node started: ${myId}`);
+  const receivedEventIds = new Set<MessageId>(); // ✅ Track processed messages
 
   let blockchain = new BlockchainService(blockchainNodeId);
 
@@ -54,20 +57,27 @@ let currentMasterId: string | null = null; // Stores the current master node ID
       new TextDecoder().decode(message.detail.data)
     ) as NodeEvent;
 
+    if (event.id && receivedEventIds.has(event.id)) {
+      Logger.trace(`⚠️ Ignoring duplicate event: ${event.id}`);
+      return;
+    }
+    if (event.id) {
+      receivedEventIds.add(event.id);
+    }
     Logger.trace(`📩 Received event: ${JSON.stringify(event, null, 1)}`);
 
     switch (event.type) {
-      case "REQUEST_SYNC_BLOCKCHAIN":
-        broadcastBlockchain();
-        break;
       case "MASTER_ANNOUNCEMENT":
         handleMasterAnnouncement(event.data);
         break;
       case "ELECTION":
         handleElection(event.data);
         break;
-      case "BLOCKCHAIN":
-        //blockchain.replaceChain(event.data);
+      case "REQUEST_SYNC_BLOCKCHAIN":
+        broadcastBlockchain();
+        break;
+      case "BLOCKCHAIN_UPDATE":
+        blockchain.loadChainFromNetwork(event.data);
         break;
       case "ADD_BLOCK":
         blockchain.addBlock(event.data);
@@ -82,8 +92,11 @@ let currentMasterId: string | null = null; // Stores the current master node ID
         broadcastBlockchain();
         break;
       case "MINE_BLOCK":
-        blockchain.mineBlock(event.data);
-        //sendBlockchain();
+        const minedBlock = blockchain.mineBlock(event.data);
+        broadcastBlock(minedBlock);
+        broadcastBlockchain();
+        break;
+      case "BLOCKCHAIN":
         break;
       default:
         Logger.warn(`Unknown event type: ${event.type}`);
@@ -134,12 +147,19 @@ let currentMasterId: string | null = null; // Stores the current master node ID
   }
 
   function handleMasterAnnouncement(masterId: any) {
-    currentMasterId = masterId;
+    setNodeAsMaster(masterId);
+    if (isMaster) {
+      blockchain.startChain();
+    }
+  }
+
+  function setNodeAsMaster(nodeId: string) {
+    currentMasterId = nodeId;
     isMaster = currentMasterId === myId;
     if (isMaster) {
-      Logger.debug(`👑 I am the new master: ${myId}`);
+      Logger.debug(`👑 I am the new master: ${nodeId}`);
     } else {
-      Logger.info(`👑 Master Node elected is: ${currentMasterId}`);
+      Logger.debug(`👑 I elect the new master: ${nodeId}`);
     }
   }
 
@@ -173,13 +193,7 @@ let currentMasterId: string | null = null; // Stores the current master node ID
   }
 
   function electNodeAsMaster(nodeId: string) {
-    currentMasterId = nodeId;
-    isMaster = currentMasterId === myId;
-    if (isMaster) {
-      Logger.debug(`👑 I am the new master: ${nodeId}`);
-    } else {
-      Logger.debug(`👑 I elect the new master: ${nodeId}`);
-    }
+    setNodeAsMaster(nodeId);
     safePublish(ELECTION_TOPIC, {
       type: "MASTER_ANNOUNCEMENT",
       data: nodeId,
@@ -188,10 +202,17 @@ let currentMasterId: string | null = null; // Stores the current master node ID
 
   async function safePublish(
     topic: string,
-    message: any,
+    message: NodeMessage,
     maxRetries = 3,
     delay = 1000
   ) {
+    const event = generateEventWithId(message);
+    if (receivedEventIds.has(event.id)) {
+      Logger.warn(`⚠️ Not rebroadcasting duplicate message: ${event.id}`);
+      return; // ✅ Avoid rebroadcasting messages
+    }
+
+    receivedEventIds.add(event.id);
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       const peers = node.services.pubsub.getSubscribers(topic);
 
@@ -202,7 +223,7 @@ let currentMasterId: string | null = null; // Stores the current master node ID
           );
           return await node.services.pubsub.publish(
             topic,
-            new TextEncoder().encode(JSON.stringify(message))
+            new TextEncoder().encode(JSON.stringify(event))
           );
         } catch (error) {
           Logger.error(
@@ -226,6 +247,14 @@ let currentMasterId: string | null = null; // Stores the current master node ID
     return Promise.resolve();
   }
 
+  function generateEventWithId(event: NodeMessage): NodeEvent {
+    return {
+      id: crypto.createHash("sha1").update(JSON.stringify(event)).digest("hex"),
+      data: event.data,
+      type: event.type,
+    };
+  }
+
   setInterval(() => {
     if (isMaster) return; // Skip if already master
 
@@ -234,4 +263,8 @@ let currentMasterId: string | null = null; // Stores the current master node ID
       startElection();
     }
   }, 10000); // Check for master failure every 10 seconds
+
+  setInterval(() => {
+    receivedEventIds.clear();
+  }, 15000); // Erase messages id every 15 seconds
 })();
