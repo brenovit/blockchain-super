@@ -1,13 +1,20 @@
 export type NodeEvent = {
   type: NodeEventType | undefined;
   data?: any;
+  id: string | null;
+};
+
+export type NodeMessage = {
+  type: NodeEventType | undefined;
+  data?: any;
 };
 
 export type NodeEventType =
-  | "REQUEST_SYNC_BLOCKCHAIN"
   | "MASTER_ANNOUNCEMENT"
-  | "ADD_BLOCK"
   | "ELECTION"
-  | "BLOCKCHAIN"
+  | "REQUEST_SYNC_BLOCKCHAIN"
+  | "BLOCKCHAIN_UPDATE"
+  | "ADD_BLOCK"
   | "CREATE_BLOCK"
-  | "MINE_BLOCK";
+  | "MINE_BLOCK"
+  | "BLOCKCHAIN";

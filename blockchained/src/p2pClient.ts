@@ -7,7 +7,8 @@ import { identify } from "@libp2p/identify";
 import { mdns } from "@libp2p/mdns";
 import { WebSocketServer, WebSocket } from "ws";
 import { Logger } from "./logger.js";
-import { NodeEvent } from "./node-event.js";
+import { NodeEvent, NodeMessage } from "./node-event.js";
+import crypto from "crypto";
 
 const WS_PORT = 5000;
 const BLOCKCHAIN_TOPIC = "blockchain";
@@ -78,6 +79,7 @@ const BLOCKCHAIN_TOPIC = "blockchain";
       Logger.info("❌ WebSocket client disconnected!");
       wsClients = wsClients.filter((client) => client !== ws);
     });
+
     safePublish(BLOCKCHAIN_TOPIC, {
       type: "REQUEST_SYNC_BLOCKCHAIN",
       data: 1,
@@ -89,16 +91,9 @@ const BLOCKCHAIN_TOPIC = "blockchain";
     Logger.info(`📩 Received event from client: ${JSON.stringify(event)}`);
 
     switch (event.type) {
-      case "SYNC_BLOCKCHAIN":
-        safePublish(BLOCKCHAIN_TOPIC, { type: "REQUEST_SYNC_BLOCKCHAIN" });
-        break;
-      case "MINE_BLOCK":
-        safePublish(BLOCKCHAIN_TOPIC, event);
-        break;
-      case "UPDATE_BLOCK":
-        safePublish(BLOCKCHAIN_TOPIC, event);
-        break;
       case "CREATE_BLOCK":
+      case "UPDATE_BLOCK":
+      case "MINE_BLOCK":
         safePublish(BLOCKCHAIN_TOPIC, event);
         break;
       default:
@@ -106,7 +101,7 @@ const BLOCKCHAIN_TOPIC = "blockchain";
     }
   }
 
-  async function safePublish(topic: string, message: NodeEvent) {
+  async function safePublish(topic: string, message: NodeMessage) {
     const peersSubscribed = node.services.pubsub.getSubscribers(topic);
 
     if (peersSubscribed.length === 0) {
@@ -122,12 +117,21 @@ const BLOCKCHAIN_TOPIC = "blockchain";
           2
         )}`
       );
+      const event = generateEventWithId(message);
+
       await node.services.pubsub.publish(
         topic,
-        new TextEncoder().encode(JSON.stringify(message))
+        new TextEncoder().encode(JSON.stringify(event))
       );
     } catch (error) {
       Logger.error(`❌ Error publishing to ${topic}: ${error}`);
     }
+  }
+  function generateEventWithId(event: NodeMessage): NodeEvent {
+    return {
+      id: crypto.createHash("sha1").update(JSON.stringify(event)).digest("hex"),
+      data: event.data,
+      type: event.type,
+    };
   }
 })();
