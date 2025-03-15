@@ -1,6 +1,6 @@
 <script lang="ts">
-	import type { Block } from '$lib/blockchain-server/model/block';
 	import { BlockchainServer } from '$lib/blockchain-server/blockchain-server';
+	import type { Block } from '$lib/blockchain-server/model/blockchain';
 
 	const server = BlockchainServer.getInstance();
 
@@ -41,10 +41,10 @@
 
 			<!-- Timestamp -->
 			<div class="mb-3 row">
-				<label class="col-sm-2 col-form-label" for="nonce">Timestamp:</label>
+				<label class="col-sm-2 col-form-label" for="timestamp">Timestamp:</label>
 				<div class="col-sm-10">
 					<input
-						id="nonce"
+						id="timestamp"
 						type="text"
 						class="form-control"
 						bind:value={block.timestamp}
@@ -90,9 +90,14 @@
 
 			<!-- Previous Hash -->
 			<div class="mb-3 row">
-				<label class="col-sm-2 col-form-label" for="nonce">Previous Hash:</label>
+				<label class="col-sm-2 col-form-label" for="previousHash">Previous Hash:</label>
 				<div class="col-sm-10">
-					<input id="nonce" type="text" class="form-control" bind:value={block.previousHash} />
+					<input
+						id="previousHash"
+						type="text"
+						class="form-control"
+						bind:value={block.previousHash}
+					/>
 				</div>
 			</div>
 

@@ -1,10 +1,11 @@
 import { blockchainStore, appStore } from '$lib/store';
-import { ServerMessageType } from './model/server-message-type';
+import type { BlockchainReceiveEvent, BlockchainSendEvent } from './model/blockchain';
 
 export class BlockchainServer {
 	private static instance: BlockchainServer;
 	private socket: WebSocket | undefined;
 	private clientId: string | null = null;
+	private receivedEventIds = new Set<string>(); // ✅ Track processed messages
 
 	private constructor() {
 		this.connect();
@@ -16,13 +17,17 @@ export class BlockchainServer {
 			this.socket.onopen = () => console.log('✅ WebSocket opened');
 			this.socket.onclose = () => console.log('❌ WebSocket closed');
 			this.socket.onmessage = (message) => {
-				const event = JSON.parse(message.data);
-				console.log(`📩 Received event: ${event}`);
+				const event = JSON.parse(message.data) as BlockchainReceiveEvent;
+				if (this.receivedEventIds.has(event.id)) {
+					return;
+				}
+				console.log(`📩 Received event: ${JSON.stringify(event, null, 1)}`);
+				this.receivedEventIds.add(event.id);
 				switch (event.type) {
-					case ServerMessageType.blockchain:
+					case 'BLOCKCHAIN':
 						blockchainStore.set(event.data);
 						break;
-					case ServerMessageType.clientId:
+					case 'CLIENT_ID':
 						appStore.set({
 							clientId: event.data
 						});
@@ -49,27 +54,25 @@ export class BlockchainServer {
 	createBlock(data: any) {
 		if (!data) return;
 		if (this.socket?.readyState === WebSocket.OPEN) {
-			this.socket?.send(
-				JSON.stringify({ type: ServerMessageType.createBlock, data, clientId: this.clientId })
-			);
+			this.send({ type: 'CREATE_BLOCK', data });
 		}
 	}
 
 	mineBlock(index: number) {
 		if (this.socket?.readyState === WebSocket.OPEN) {
-			this.socket?.send(
-				JSON.stringify({ type: ServerMessageType.mineBlock, data: index, clientId: this.clientId })
-			);
+			this.send({ type: 'MINE_BLOCK', data: index });
 		}
 	}
 
 	updateBlock(data: any) {
 		if (!data) return;
 		if (this.socket?.readyState === WebSocket.OPEN) {
-			this.socket?.send(
-				JSON.stringify({ type: ServerMessageType.updateBlock, data, clientId: this.clientId })
-			);
+			this.send({ type: 'UPDATE_BLOCK', data });
 		}
+	}
+
+	private send(message: BlockchainSendEvent) {
+		this.socket?.send(JSON.stringify(message));
 	}
 
 	disconnect() {
