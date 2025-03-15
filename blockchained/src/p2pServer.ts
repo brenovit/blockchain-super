@@ -12,8 +12,8 @@ import { NodeEvent } from "./node-event.js";
 const INITIAL_ID = 1;
 const argId = process.argv.slice(2)[0] ?? INITIAL_ID;
 
-const nodeId = Number(argId);
-Logger.info(`🚀 Starting node with id: ${nodeId}`);
+const blockchainNodeId = Number(argId);
+Logger.info(`🚀 Starting blockchain node with id: ${blockchainNodeId}`);
 
 const BLOCKCHAIN_TOPIC = "blockchain";
 const ELECTION_TOPIC = "leader-election";
@@ -37,9 +37,10 @@ let currentMasterId: string | null = null; // Stores the current master node ID
   });
 
   await node.start();
-  Logger.info(`🚀 libp2p Node started: ${node.peerId.toString()}`);
+  const myId = node.peerId.toString();
+  Logger.info(`🚀 libp2p Node started: ${myId}`);
 
-  let blockchain = new BlockchainService(nodeId);
+  let blockchain = new BlockchainService(blockchainNodeId);
 
   // Subscribe to topics
   await node.services.pubsub.subscribe(BLOCKCHAIN_TOPIC);
@@ -134,11 +135,16 @@ let currentMasterId: string | null = null; // Stores the current master node ID
 
   function handleMasterAnnouncement(masterId: any) {
     currentMasterId = masterId;
-    Logger.info(`👑 Master Node is now: ${currentMasterId}`);
+    isMaster = currentMasterId === myId;
+    if (isMaster) {
+      Logger.debug(`👑 I am the new master: ${myId}`);
+    } else {
+      Logger.info(`👑 Master Node elected is: ${currentMasterId}`);
+    }
   }
 
   function handleElection(electId: any) {
-    const myId = node.peerId.toString();
+    Logger.debug(`🗳️ Starting election...`);
     if (isMaster) {
       Logger.info(`👑 I am already the new master: ${myId}`);
       safePublish(ELECTION_TOPIC, {
@@ -149,53 +155,63 @@ let currentMasterId: string | null = null; // Stores the current master node ID
     }
 
     if (!currentMasterId) {
-      Logger.debug(`🗳️ Starting election...`);
-      startElection();
+      electNodeAsMaster(electId);
     }
   }
 
   function startElection() {
-    const myId = node.peerId.toString();
     Logger.debug("⚡ Starting leader election...");
 
-    safePublish(ELECTION_TOPIC, { type: "ELECTION", data: myId });
+    safePublish(ELECTION_TOPIC, { type: "ELECTION", data: myId }).then(
+      () =>
+        setTimeout(() => {
+          if (!currentMasterId) {
+            electNodeAsMaster(myId);
+          }
+        }, 5000) // Wait 5 seconds after succesfully publish, to ensure no other node claims master first
+    );
+  }
 
-    setTimeout(() => {
-      if (!currentMasterId) {
-        isMaster = true;
-        currentMasterId = myId;
-        Logger.debug(`👑 I am the new master: ${myId}`);
-        safePublish(ELECTION_TOPIC, {
-          type: "MASTER_ANNOUNCEMENT",
-          data: myId,
-        });
-      }
-    }, 3000); // Wait 3 seconds to ensure no other node claims master first
+  function electNodeAsMaster(nodeId: string) {
+    currentMasterId = nodeId;
+    isMaster = currentMasterId === myId;
+    if (isMaster) {
+      Logger.debug(`👑 I am the new master: ${nodeId}`);
+    } else {
+      Logger.debug(`👑 I elect the new master: ${nodeId}`);
+    }
+    safePublish(ELECTION_TOPIC, {
+      type: "MASTER_ANNOUNCEMENT",
+      data: nodeId,
+    });
   }
 
   async function safePublish(
     topic: string,
     message: any,
     maxRetries = 3,
-    delay = 1500
+    delay = 1000
   ) {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       const peers = node.services.pubsub.getSubscribers(topic);
 
       if (peers.length > 0) {
         try {
-          Logger.info(`📡 Publishing to ${topic} (Attempt ${attempt})`);
-          await node.services.pubsub.publish(
+          Logger.debug(
+            `📡 Publishing to ${topic} (Attemp ${attempt}/${maxRetries}`
+          );
+          return await node.services.pubsub.publish(
             topic,
             new TextEncoder().encode(JSON.stringify(message))
           );
-          return;
         } catch (error) {
-          Logger.error(`❌ Error publishing (Attempt ${attempt}): ${error}`);
+          Logger.error(
+            `❌ Error publishing (Attemp ${attempt}/${maxRetries}): ${error}`
+          );
         }
       } else {
         Logger.warn(
-          `⚠️ No peers subscribed to ${topic}. Attemp ${attempt}/${maxRetries} Retrying in ${
+          `⚠️ No peers subscribed to ${topic}. (Attemp ${attempt}/${maxRetries}). Retrying in ${
             delay / 1000
           } seconds...`
         );
@@ -207,6 +223,7 @@ let currentMasterId: string | null = null; // Stores the current master node ID
     Logger.error(
       `❌ Failed to publish to ${topic} after ${maxRetries} attempts.`
     );
+    return Promise.resolve();
   }
 
   setInterval(() => {
@@ -216,5 +233,5 @@ let currentMasterId: string | null = null; // Stores the current master node ID
       Logger.info("🚨 Master node is missing, starting re-election...");
       startElection();
     }
-  }, 5000); // Check for master failure every 5 seconds
+  }, 10000); // Check for master failure every 10 seconds
 })();
