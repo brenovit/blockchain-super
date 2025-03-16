@@ -44,6 +44,7 @@ type MessageId = string | null;
   const receivedEventIds = new Set<MessageId>(); // ✅ Track processed messages
 
   let blockchain = new BlockchainService(blockchainNodeId);
+  let processingBlock = false;
 
   // Subscribe to topics
   await node.services.pubsub.subscribe(BLOCKCHAIN_TOPIC);
@@ -80,15 +81,10 @@ type MessageId = string | null;
         blockchain.loadChainFromNetwork(event.data);
         break;
       case "ADD_BLOCK":
-        blockchain.addBlock(event.data);
-        broadcastBlockchain();
+        handleAddBlock(event.data);
         break;
       case "CREATE_BLOCK":
-        const newBlock = blockchain.createAndAddBlock({
-          data: event.data,
-          clientId: "2",
-        });
-        broadcastBlockchain();
+        handleCreateBlock(event.data);
         break;
       case "MINE_BLOCK":
         const minedBlock = blockchain.mineBlock(event.data);
@@ -98,6 +94,29 @@ type MessageId = string | null;
         break;
       default:
         Logger.warn(`Unknown event type: ${event.type}`);
+    }
+  }
+
+  async function handleCreateBlock(blockData: any) {
+    if (processingBlock) return;
+    processingBlock = true;
+    const newBlock = await blockchain.createBlock({
+      data: blockData,
+      clientId: "2",
+    });
+
+    await safePublish(BLOCKCHAIN_TOPIC, {
+      type: "ADD_BLOCK",
+      data: newBlock,
+    });
+    processingBlock = false;
+  }
+
+  function handleAddBlock(block: any) {
+    if (blockchain.addBlock(block)) {
+      Logger.info(`✅ Block accepted into the chain: ${block.hash}`);
+    } else {
+      Logger.warn(`❌ Rejected invalid block: ${block.hash}`);
     }
   }
 

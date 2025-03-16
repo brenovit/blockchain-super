@@ -60,9 +60,19 @@ class BlockService {
       .digest("hex");
   }
 
-  mine(block: Block): void {
+  async mine(block: Block): Promise<Block> {
     block.nonce = 0;
     block.hash = this.calculateHash(block);
+
+    const delay = Math.floor(Math.random() * 5000) + 1000; // ⏳ Random delay between 1-5 seconds
+    Logger.debug(
+      `⏳ Simulating processing time: Waiting ${
+        delay / 1000
+      } seconds before mining...`
+    );
+
+    await new Promise((resolve) => setTimeout(resolve, delay)); // Wait for the random delay
+
     while (
       block.hash.substring(0, this.difficulty) !=
       Array(this.difficulty + 1).join("0")
@@ -71,6 +81,8 @@ class BlockService {
       block.hash = this.calculateHash(block);
     }
     this.checkValid(block);
+    Logger.info(`⛏️ Mined new block: ${block.hash}`);
+    return block;
   }
 
   checkValid(block: Block) {
@@ -150,30 +162,32 @@ class BlockchainService {
     return this.chain[this.chain.length - 1];
   }
 
-  createAndAddBlock(data: any): Block {
+  async createBlock(data: any): Promise<Block> {
     Logger.info("Creating block to add in the chain");
     const newBlock = new Block(data);
     newBlock.index = this.chain.length;
     newBlock.previousHash = this.getLatestBlock().hash;
-    this.blockService.mine(newBlock);
-    this.chain.push(newBlock);
-    Logger.info("Block created and added");
-
-    this.logChain();
-    this.saveChain();
-    return newBlock;
+    const minedBlock = this.blockService.mine(newBlock);
+    return minedBlock;
   }
 
-  addBlock(newBlock: Block): void {
+  addBlock(newBlock: Block): boolean {
     Logger.info("Adding block to the chain");
-    newBlock.index = this.chain.length;
-    newBlock.previousHash = this.getLatestBlock().hash;
-    this.blockService.mine(newBlock);
-    this.chain.push(newBlock);
-    Logger.info("Block added");
+    if (this.isValidNewBlock(newBlock, this.getLatestBlock())) {
+      this.chain.push(newBlock);
+      Logger.info("Block added");
+      this.saveChain();
+      this.logChain();
+      return true;
+    }
+    return false;
+  }
 
-    this.logChain();
-    this.saveChain();
+  private isValidNewBlock(newBlock: Block, previousBlock: Block) {
+    if (newBlock.previousHash !== previousBlock.hash) return false;
+    if (newBlock.hash !== this.blockService.calculateHash(newBlock))
+      return false;
+    return true;
   }
 
   mineBlock(index: number) {
