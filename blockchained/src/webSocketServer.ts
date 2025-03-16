@@ -39,7 +39,7 @@ function startWebSocketServer(port: number) {
           discoverPeer(event.data.peerUrl);
           break;
         case "CREATE_BLOCK":
-          blockchain.createAndAddBlock({
+          blockchain.createBlock({
             data: event.data,
             clientId: event.clientId,
           });

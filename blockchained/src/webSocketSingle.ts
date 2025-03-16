@@ -38,7 +38,7 @@ wss.on("connection", (ws) => {
         ws.send(JSON.stringify({ type: "BLOCKCHAIN", data: blockchain.data }));
         break;
       case "CREATE_BLOCK":
-        blockchain.createAndAddBlock({
+        blockchain.createBlock({
           data: event.data,
           clientId: event.clientId,
         });
@@ -96,7 +96,7 @@ app.post("/create-block", (req: any, res: any) => {
     return res.status(400).json({ error: "Data is required" });
   }
 
-  const newBlock = blockchain.createAndAddBlock(data);
+  const newBlock = blockchain.createBlock(data);
   res.json(newBlock);
 });
 
