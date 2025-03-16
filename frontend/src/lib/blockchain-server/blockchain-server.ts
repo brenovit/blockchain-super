@@ -21,7 +21,7 @@ export class BlockchainServer {
 				if (this.receivedEventIds.has(event.id)) {
 					return;
 				}
-				console.log(`📩 Received event: ${JSON.stringify(event, null, 1)}`);
+				console.log(`📩 Received event: ${event.type} | ${event.id}`);
 				this.receivedEventIds.add(event.id);
 				switch (event.type) {
 					case 'BLOCKCHAIN':

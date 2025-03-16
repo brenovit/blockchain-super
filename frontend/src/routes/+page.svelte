@@ -20,7 +20,7 @@
 		blockChainStatus = value.status;
 	});
 
-	function addBlock() {
+	function createBlock() {
 		if (!data) return;
 
 		server.createBlock(data);
@@ -33,40 +33,59 @@
 	});
 </script>
 
-<div class="container mt-5">
-	<h1 class="text-center">Blockchain Simulator</h1>
-	<h3>Your Client ID: <span class="badge text-bg-secondary">{clientId}</span></h3>
+<div class="container mt-3">
+	<div class="top-section sticky-top bg-white py-3">
+		<div class="row">
+			<div class="col">
+				<h1 class="text-center">Blockchain Simulator</h1>
+				<h5>Client ID: <span class="badge text-bg-secondary">{clientId}</span></h5>
+				<h5>
+					Blockchain status: {#if blockChainStatus.valid}
+						<span class="badge text-bg-success">Valid</span>
+					{:else}
+						<span class="badge text-bg-danger">Invalid</span>
+						<hr />
+						<ul class="list-group list-group-flush">
+							{#each blockChainStatus.errors as error}
+								<li class="list-group-item">{error}</li>
+							{/each}
+						</ul>
+					{/if}
+				</h5>
 
-	<div class="row mt-4">
-		<div class="col-md">
-			{#if blockChainStatus.valid}
-				<div class="alert alert-success" role="alert">The chain is currently valid</div>
-			{:else}
-				<div class="alert alert-danger" role="alert">The chain is currently invalid</div>
-				<hr />
-				<ul class="list-group list-group-flush">
-					{#each blockChainStatus.errors as error}
-						<li class="list-group-item">{error}</li>
-					{/each}
-				</ul>
-			{/if}
-		</div>
-	</div>
-
-	<!-- Form to Add Blocks -->
-	<div class="row mt-4">
-		<div class="col-md-8 offset-md-2">
-			<div class="input-group">
-				<input type="text" bind:value={data} class="form-control" placeholder="Enter data..." />
-				<button class="btn btn-primary" on:click={addBlock}>'Add Block'</button>
+				<!-- Form to Add Blocks -->
+				<div class="row mt-3">
+					<div class="col">
+						<div class="input-group">
+							<input
+								type="text"
+								bind:value={data}
+								class="form-control"
+								placeholder="Enter data..."
+							/>
+							<button class="btn btn-primary" on:click={createBlock}>Create Block</button>
+						</div>
+					</div>
+				</div>
 			</div>
 		</div>
 	</div>
-
-	<!-- Blockchain Display -->
-	<div class="row mt-3">
-		{#each blockchain as block}
-			<Block {block} />
-		{/each}
+	<div class="blockchain-container">
+		<div class="row mt-4">
+			<h3 class="text-center">Blockchain</h3>
+		</div>
+		<!-- Blockchain Display -->
+		<div class="row mt">
+			{#each blockchain as block}
+				<Block {block} />
+			{/each}
+		</div>
 	</div>
 </div>
+
+<style>
+	.blockchain-container {
+		overflow-y: auto; /* Enable scrolling only in blockchain section */
+		padding: 20px;
+	}
+</style>
