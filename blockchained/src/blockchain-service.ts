@@ -41,68 +41,17 @@ class Block {
   }
 }
 
-class BlockService {
-  private difficulty: number;
-  constructor(difficulty: number) {
-    this.difficulty = difficulty;
-  }
-
-  calculateHash({
-    index,
-    timestamp,
-    data,
-    previousHash,
-    nonce,
-  }: Block): string {
-    return crypto
-      .createHash("sha256")
-      .update(index + timestamp + JSON.stringify(data) + previousHash + nonce)
-      .digest("hex");
-  }
-
-  async mine(block: Block): Promise<Block> {
-    block.nonce = 0;
-    block.hash = this.calculateHash(block);
-
-    const delay = Math.floor(Math.random() * 5000) + 1000; // ⏳ Random delay between 1-5 seconds
-    Logger.debug(
-      `⏳ Simulating processing time: Waiting ${
-        delay / 1000
-      } seconds before mining...`
-    );
-
-    await new Promise((resolve) => setTimeout(resolve, delay)); // Wait for the random delay
-
-    while (
-      block.hash.substring(0, this.difficulty) !=
-      Array(this.difficulty + 1).join("0")
-    ) {
-      block.nonce++;
-      block.hash = this.calculateHash(block);
-    }
-    this.checkValid(block);
-    Logger.info(`⛏️ Mined new block: ${block.hash}`);
-    return block;
-  }
-
-  checkValid(block: Block) {
-    block.valid = block.hash == this.calculateHash(block);
-  }
-}
-
 const FIXED_GENESIS_BLOCK = {
   index: 0,
-  timestamp: "1997-23-01T15:40:00.000Z", // ✅ Fixed timestamp
-  data: { clientId: "genesis", data: "Genesis Block" }, // ✅ Consistent data
+  timestamp: "1997-23-01T15:40:00.000Z",
+  data: { clientId: "genesis", data: "Genesis Block" },
   previousHash: "0",
   nonce: 0,
-  hash: "FIXED_HASH", // ✅ Precomputed hash
 };
 
 class BlockchainService {
   private _blockchain: Blockchain;
 
-  private blockService: BlockService;
   private storage: StorageService;
 
   private get chain() {
@@ -120,7 +69,6 @@ class BlockchainService {
   constructor(identifier: any) {
     this.storage = new StorageService(identifier);
     this._blockchain = this.createOrLoadBlockchain();
-    this.blockService = new BlockService(this.difficulty);
   }
 
   private createOrLoadBlockchain() {
@@ -142,7 +90,7 @@ class BlockchainService {
       FIXED_GENESIS_BLOCK.timestamp,
       FIXED_GENESIS_BLOCK.previousHash
     );
-    block.hash = this.blockService.calculateHash(block);
+    block.hash = this.calculateHash(block);
     return block;
   }
 
@@ -163,19 +111,20 @@ class BlockchainService {
   }
 
   async createBlock(data: any): Promise<Block> {
-    Logger.info("Creating block to add in the chain");
+    Logger.info("Creating new block to be added in the chain");
     const newBlock = new Block(data);
     newBlock.index = this.chain.length;
     newBlock.previousHash = this.getLatestBlock().hash;
-    const minedBlock = this.blockService.mine(newBlock);
+    const minedBlock = this.mine(newBlock);
     return minedBlock;
   }
 
   addBlock(newBlock: Block): boolean {
-    Logger.info("Adding block to the chain");
+    Logger.info(
+      `Adding block to the chain: ${newBlock.index} : ${newBlock.hash}`
+    );
     if (this.isValidNewBlock(newBlock, this.getLatestBlock())) {
       this.chain.push(newBlock);
-      Logger.info("Block added");
       this.saveChain();
       this.logChain();
       return true;
@@ -184,20 +133,35 @@ class BlockchainService {
   }
 
   private isValidNewBlock(newBlock: Block, previousBlock: Block) {
-    if (newBlock.previousHash !== previousBlock.hash) return false;
-    if (newBlock.hash !== this.blockService.calculateHash(newBlock))
-      return false;
-    return true;
+    Logger.debug(
+      `Checking block is valid: ${newBlock.index} : ${newBlock.hash}`
+    );
+    const currentAndPreviousBlocksHaveSameHash =
+      newBlock.previousHash === previousBlock.hash;
+    const currentAndPreviousBlockHaveDifferentIndex =
+      newBlock.index !== previousBlock.index;
+    const currentBlockHasValidHash =
+      newBlock.hash === this.calculateHash(newBlock);
+
+    Logger.debug(
+      `Block status: ${newBlock.index} : ${newBlock.hash}
+      | currentAndPreviousBlockHaveSameHash: ${currentAndPreviousBlocksHaveSameHash} 
+      | currentAndPreviousBlockHaveDifferentIndex: ${currentAndPreviousBlockHaveDifferentIndex}
+      | currentBlockHasValidHash: ${currentBlockHasValidHash}`
+    );
+    return (
+      currentAndPreviousBlocksHaveSameHash &&
+      currentAndPreviousBlockHaveDifferentIndex &&
+      currentBlockHasValidHash
+    );
   }
 
   mineBlock(index: number) {
     Logger.info("Mining block: " + index);
     const block = this.chain[index];
-    this.blockService.mine(block);
-    Logger.info("Block mined");
-
-    this.logChain();
+    this.mine(block);
     this.saveChain();
+    this.logChain();
     return block;
   }
 
@@ -211,11 +175,56 @@ class BlockchainService {
     block.nonce = payload.nonce;
     block.data = payload.data;
     block.previousHash = payload.previousHash;
-    this.blockService.checkValid(block);
+    this.checkValid(block);
     Logger.info("Block updated");
-
-    this.logChain();
     this.saveChain();
+    this.logChain();
+  }
+
+  private calculateHash({
+    index,
+    timestamp,
+    data,
+    previousHash,
+    nonce,
+  }: Block): string {
+    return crypto
+      .createHash("sha256")
+      .update(index + timestamp + JSON.stringify(data) + previousHash + nonce)
+      .digest("hex");
+  }
+
+  private async mine(block: Block): Promise<Block> {
+    block.nonce = 0;
+    block.hash = this.calculateHash(block);
+
+    const delay = Math.floor(Math.random() * 5000) + 1000; // ⏳ Random delay between 1-5 seconds
+    Logger.debug(
+      `⏳ Simulating processing time: Waiting ${
+        delay / 1000
+      } seconds before mining...`
+    );
+
+    await new Promise((resolve) => setTimeout(resolve, delay)); // Wait for the random delay
+
+    while (
+      block.hash.substring(0, this.difficulty) !=
+      Array(this.difficulty + 1).join("0")
+    ) {
+      if (this.getLatestBlock().hash !== block.previousHash) {
+        Logger.warn(`⚠️ Mining stopped: A new valid block was found.`);
+        return block; // ✅ Stop mining if another block has been accepted
+      }
+      block.nonce++;
+      block.hash = this.calculateHash(block);
+    }
+    this.checkValid(block);
+    Logger.info(`⛏️ Mined new block: ${block.hash}`);
+    return block;
+  }
+
+  checkValid(block: Block) {
+    block.valid = block.hash == this.calculateHash(block);
   }
 
   private logChain() {
@@ -234,9 +243,7 @@ class BlockchainService {
         errors.push(
           `The block #${
             currentBlock.index
-          } is invalid. Calculated hash: ${this.blockService.calculateHash(
-            currentBlock
-          )}`
+          } is invalid. Calculated hash: ${this.calculateHash(currentBlock)}`
         );
       }
 

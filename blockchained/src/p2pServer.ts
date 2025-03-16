@@ -80,11 +80,11 @@ type MessageId = string | null;
       case "BLOCKCHAIN_UPDATE":
         blockchain.loadChainFromNetwork(event.data);
         break;
-      case "ADD_BLOCK":
-        handleAddBlock(event.data);
-        break;
       case "CREATE_BLOCK":
         handleCreateBlock(event.data);
+        break;
+      case "ADD_BLOCK":
+        handleAddBlock(event.data);
         break;
       case "MINE_BLOCK":
         const minedBlock = blockchain.mineBlock(event.data);
@@ -105,28 +105,29 @@ type MessageId = string | null;
       clientId: "2",
     });
 
-    await safePublish(BLOCKCHAIN_TOPIC, {
-      type: "ADD_BLOCK",
-      data: newBlock,
-    });
+    if (handleAddBlock(newBlock)) {
+      Logger.debug(`Publishing created block: ${JSON.stringify(newBlock)}`);
+      await safePublish(BLOCKCHAIN_TOPIC, {
+        type: "ADD_BLOCK",
+        data: newBlock,
+      });
+    }
     processingBlock = false;
   }
 
   function handleAddBlock(block: any) {
     if (blockchain.addBlock(block)) {
-      Logger.info(`✅ Block accepted into the chain: ${block.hash}`);
-    } else {
-      Logger.warn(`❌ Rejected invalid block: ${block.hash}`);
+      Logger.info(
+        `✅ Block acepted into the chain: ${block.index} : ${block.hash}`
+      );
+      return true;
     }
-  }
-
-  function broadcastBlock(block: Block) {
-    Logger.trace("📡 Broadcasting new block...");
-    safePublish(BLOCKCHAIN_TOPIC, { type: "ADD_BLOCK", data: block });
+    Logger.warn(`❌ Block rejected: ${block.index} : ${block.hash}`);
+    return false;
   }
 
   node.addEventListener("peer:discovery", (event) => {
-    Logger.debug(`🔍 Discovered new peer: ${event.detail.id}`);
+    Logger.info(`🔍 Discovered new peer: ${event.detail.id}`);
     peerDiscovery(event.detail.id);
   });
 
@@ -134,9 +135,6 @@ type MessageId = string | null;
     await node
       .dial(peerId)
       .catch((err) => Logger.error(`❌ Failed to connect to peer: ${err}`));
-
-    //broadcastBlockchain();
-    //checkIfMasterNode(peerId.toString());
   }
 
   function broadcastBlockchain() {
@@ -149,7 +147,7 @@ type MessageId = string | null;
 
   node.addEventListener("peer:disconnect", (event) => {
     const peerId = event.detail.toString();
-    Logger.debug(`❌ Peer disconnected: ${peerId}`);
+    Logger.info(`❌ Peer disconnected: ${peerId}`);
     checkIfMasterNode(peerId);
   });
 
@@ -187,7 +185,7 @@ type MessageId = string | null;
   function handleElection(electId: any) {
     Logger.debug(`🗳️ Starting election...`);
     if (isMaster) {
-      Logger.info(`👑 I am already the new master: ${myId}`);
+      Logger.debug(`👑 I am already the new master: ${myId}`);
       safePublish(ELECTION_TOPIC, {
         type: "MASTER_ANNOUNCEMENT",
         data: myId,
@@ -230,7 +228,7 @@ type MessageId = string | null;
     const event = generateEventWithId(message);
     if (receivedEventIds.has(event.id)) {
       Logger.warn(`⚠️ Not rebroadcasting duplicate message: ${event.id}`);
-      return; // ✅ Avoid rebroadcasting messages
+      return;
     }
 
     receivedEventIds.add(event.id);
@@ -239,7 +237,7 @@ type MessageId = string | null;
 
       if (peers.length > 0) {
         try {
-          Logger.debug(
+          Logger.trace(
             `📡 Publishing to topic [${topic}] | ${event.type} : ${event.id} | Attemp: ${attempt}/${maxRetries}`
           );
           return await node.services.pubsub.publish(
@@ -262,7 +260,7 @@ type MessageId = string | null;
       await new Promise((resolve) => setTimeout(resolve, delay));
     }
 
-    Logger.error(
+    Logger.warn(
       `❌ Failed to publish to ${topic} after ${maxRetries} attempts.`
     );
     return Promise.resolve();
@@ -280,7 +278,7 @@ type MessageId = string | null;
     if (isMaster) return; // Skip if already master
 
     if (!currentMasterId) {
-      Logger.info("🚨 Master node is missing, starting re-election...");
+      Logger.warn("🚨 Master node is missing, starting election...");
       startElection();
     }
   }, 10000); // Check for master failure every 10 seconds

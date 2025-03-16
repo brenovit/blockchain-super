@@ -14,7 +14,7 @@ export type NodeEventType =
   | "ELECTION"
   | "REQUEST_SYNC_BLOCKCHAIN"
   | "BLOCKCHAIN_UPDATE"
-  | "ADD_BLOCK"
   | "CREATE_BLOCK"
+  | "ADD_BLOCK"
   | "MINE_BLOCK"
   | "BLOCKCHAIN";
