@@ -15,13 +15,26 @@ const argId = process.argv.slice(2)[0] ?? INITIAL_ID;
 
 const blockchainNodeId = Number(argId);
 Logger.info(`🚀 Starting blockchain node with id: ${blockchainNodeId}`);
+const blockchain = new BlockchainService(blockchainNodeId);
 
-const BLOCKCHAIN_TOPIC = "blockchain";
-const ELECTION_TOPIC = "leader-election";
+type TopicName = "blockchain" | "leader-election" | "vote";
+
+const ELECTION_TOPIC: TopicName = "leader-election";
+const VOTE_TOPIC: TopicName = "vote";
+const BLOCKCHAIN_TOPIC: TopicName = "blockchain";
+
+const topics = {
+  ELECTION_TOPIC,
+  VOTE_TOPIC,
+  BLOCKCHAIN_TOPIC,
+};
 
 let isMaster = false; // Tracks if the node is master
 let currentMasterId: string | null = null; // Stores the current master node ID
 type MessageId = string | null;
+
+let votes: { [peerId: string]: boolean } = {};
+let totalPeers = 1;
 
 const node = await createLibp2p({
   addresses: {
@@ -42,15 +55,36 @@ const myId = node.peerId.toString();
 Logger.info(`🚀 libp2p Node started: ${myId}`);
 const receivedEventIds = new Set<MessageId>(); // ✅ Track processed messages
 
-let blockchain = new BlockchainService(blockchainNodeId);
 let processingBlock = false;
+let pendingBlock: Block | null = null;
 
 // Subscribe to topics
 await node.services.pubsub.subscribe(BLOCKCHAIN_TOPIC);
 await node.services.pubsub.subscribe(ELECTION_TOPIC);
-node.services.pubsub.addEventListener("message", handleEvent);
+await node.services.pubsub.subscribe(VOTE_TOPIC);
 
+//listen to messages
+node.services.pubsub.addEventListener("message", handleEvent);
 Logger.info(`🌍 Listening for blockchain messages...`);
+
+node.addEventListener("peer:discovery", (event) => {
+  Logger.info(`🔍 Discovered new peer: ${event.detail.id}`);
+  peerDiscovery(event.detail.id);
+});
+
+async function peerDiscovery(peerId: any) {
+  totalPeers += 1;
+  await node
+    .dial(peerId)
+    .catch((err) => Logger.error(`❌ Failed to connect to peer: ${err}`));
+}
+
+node.addEventListener("peer:disconnect", (event) => {
+  const peerId = event.detail.toString();
+  Logger.info(`❌ Peer disconnected: ${peerId}`);
+  totalPeers -= 1;
+  checkIfMasterNode(peerId);
+});
 
 function handleEvent(message: any) {
   const event = JSON.parse(
@@ -73,7 +107,10 @@ function handleEvent(message: any) {
     case "ELECTION":
       handleElection(event.data);
       break;
-    case "REQUEST_SYNC_BLOCKCHAIN":
+    case "REQUEST_SYNC_BLOCKCHAIN_SERVER": //Comes from server
+      handleSyncNodes(event);
+      break;
+    case "REQUEST_SYNC_BLOCKCHAIN": //Comes from client
       broadcastBlockchain();
       break;
     case "BLOCKCHAIN_UPDATE":
@@ -86,14 +123,49 @@ function handleEvent(message: any) {
       handleAddBlock(event.data);
       break;
     case "MINE_BLOCK":
-      const minedBlock = blockchain.mineBlock(event.data);
+      blockchain.mineBlock(event.data);
       broadcastBlockchain();
       break;
-    case "BLOCKCHAIN":
+    case "VOTE_RESPONSE":
+      handleVoteResponse(event.data);
+      break;
+    case "VOTE_REQUEST":
+      handleVoteRequest(event.data);
+      break;
+    case "BLOCKCHAIN": //Handled by from client
       break;
     default:
       Logger.warn(`Unknown event type: ${event.type}`);
   }
+}
+
+function handleSyncNodes(event: any) {
+  if (isMaster) {
+    Logger.info(`🚀 Master node sending blockchain to ${event.sender}`);
+    safePublish(topics.BLOCKCHAIN_TOPIC, {
+      type: "BLOCKCHAIN_UPDATE",
+      data: blockchain.data,
+    });
+  }
+}
+
+function handleVoteResponse(data: any) {
+  if (pendingBlock && data.blockHash == pendingBlock.hash) {
+    votes[data.voter] = data.vote;
+  }
+}
+function handleVoteRequest(data: any) {
+  Logger.info(`📩 Received vote request for block: ${data.block.hash}`);
+
+  const isValid = blockchain.checkValid(data.block);
+  safePublish(topics.VOTE_TOPIC, {
+    type: "VOTE_RESPONSE",
+    data: {
+      blockHash: data.block.hash,
+      vote: isValid,
+      voter: myId,
+    },
+  });
 }
 
 async function handleCreateBlock(blockData: any) {
@@ -104,12 +176,23 @@ async function handleCreateBlock(blockData: any) {
     clientId: "2",
   });
 
-  if (handleAddBlock(newBlock)) {
-    Logger.debug(`Publishing created block: ${JSON.stringify(newBlock)}`);
-    await safePublish(BLOCKCHAIN_TOPIC, {
-      type: "ADD_BLOCK",
-      data: newBlock,
+  if (newBlock.valid) {
+    pendingBlock = newBlock;
+
+    votes = {};
+    Logger.info(`🗳️ Requesting votes for new block: ${newBlock.hash}`);
+
+    safePublish(topics.VOTE_TOPIC, {
+      type: "VOTE_REQUEST",
+      data: {
+        block: newBlock,
+        proposer: myId,
+      },
     });
+
+    setTimeout(() => finalizeBlockDecision(), 5000);
+  } else {
+    Logger.warn(`❌ Mined block is invalid and won't be voted on.`);
   }
   processingBlock = false;
 }
@@ -125,31 +208,42 @@ function handleAddBlock(block: any) {
   return false;
 }
 
-node.addEventListener("peer:discovery", (event) => {
-  Logger.info(`🔍 Discovered new peer: ${event.detail.id}`);
-  peerDiscovery(event.detail.id);
-});
+function finalizeBlockDecision() {
+  if (!pendingBlock) return;
 
-async function peerDiscovery(peerId: any) {
-  await node
-    .dial(peerId)
-    .catch((err) => Logger.error(`❌ Failed to connect to peer: ${err}`));
+  const totalVotes = Object.keys(votes).length;
+  const yesVotes = Object.values(votes).filter((v) => v).length;
+
+  Logger.debug(
+    `totalVotes: ${totalVotes} | yesVotes: ${yesVotes} | totalPeer: ${totalPeers} | consensus: ${Math.ceil(
+      totalPeers / 2
+    )}`
+  );
+
+  if (totalVotes > 0 && yesVotes >= Math.ceil(totalPeers / 2) - 1) {
+    Logger.info(`✅ Block accepted by majority: ${pendingBlock.hash}`);
+    safePublish(topics.BLOCKCHAIN_TOPIC, {
+      type: "ADD_BLOCK",
+      data: { pendingBlock },
+    });
+  } else {
+    Logger.warn(`❌ Block rejected by majority: ${pendingBlock.hash}`);
+  }
+
+  pendingBlock = null;
 }
 
 function broadcastBlockchain() {
-  Logger.trace("📡 Broadcasting blockchain...");
-  safePublish(BLOCKCHAIN_TOPIC, {
-    type: "BLOCKCHAIN",
-    data: blockchain.data,
-  });
+  if (isMaster) {
+    Logger.trace("📡 Broadcasting blockchain...");
+    safePublish(BLOCKCHAIN_TOPIC, {
+      type: "BLOCKCHAIN",
+      data: blockchain.data,
+    });
+  }
 }
 
-node.addEventListener("peer:disconnect", (event) => {
-  const peerId = event.detail.toString();
-  Logger.info(`❌ Peer disconnected: ${peerId}`);
-  checkIfMasterNode(peerId);
-});
-
+//============= START: Elect master node (leader-election)
 function checkIfMasterNode(peerId: string) {
   if (currentMasterId === peerId) {
     Logger.warn(
@@ -163,10 +257,10 @@ function checkIfMasterNode(peerId: string) {
 function handleMasterAnnouncement(masterId: any) {
   setNodeAsMaster(masterId);
   if (isMaster) {
-    blockchain.startChain();
+    //blockchain.startChain();
     safePublish(BLOCKCHAIN_TOPIC, {
       type: "BLOCKCHAIN_UPDATE",
-      data: blockchain.data.chain,
+      data: blockchain.data,
     });
   }
 }
@@ -177,7 +271,7 @@ function setNodeAsMaster(nodeId: string) {
   if (isMaster) {
     Logger.debug(`👑 I am the new master: ${nodeId}`);
   } else {
-    Logger.debug(`👑 I elect the new master: ${nodeId}`);
+    Logger.debug(`🫡 I elect the new master: ${nodeId}`);
   }
 }
 
@@ -198,16 +292,16 @@ function handleElection(electId: any) {
 }
 
 function startElection() {
-  Logger.debug("⚡ Starting leader election...");
+  Logger.debug("🎭 Starting leader election...");
+  const delay = Math.floor(Math.random() * 3000) + 1000; // ⏳ Random delay between 1-3 seconds
 
-  safePublish(ELECTION_TOPIC, { type: "ELECTION", data: myId }).then(
-    () =>
-      setTimeout(() => {
-        if (!currentMasterId) {
-          electNodeAsMaster(myId);
-        }
-      }, 5000) // Wait 5 seconds after succesfully publish, to ensure no other node claims master first
-  );
+  safePublish(ELECTION_TOPIC, { type: "ELECTION", data: myId });
+  Logger.debug(`⏳ Waiting ${delay / 1000} seconds before elect master...`);
+  setTimeout(() => {
+    if (!currentMasterId) {
+      electNodeAsMaster(myId);
+    }
+  }, delay);
 }
 
 function electNodeAsMaster(nodeId: string) {
@@ -218,15 +312,27 @@ function electNodeAsMaster(nodeId: string) {
   });
 }
 
+// Check for master failure every 10 seconds
+setInterval(() => {
+  if (isMaster) return; // Skip if already master
+
+  if (!currentMasterId) {
+    Logger.warn("🚨 Master node is missing, starting election...");
+    startElection();
+  }
+}, 5000);
+//============= STOP: Elect master node (leader-election)
+
+//============= START: Publish to node
 async function safePublish(
-  topic: string,
+  topic: TopicName,
   message: NodeMessage,
   maxRetries = 3,
   delay = 1000
 ) {
   const event = generateEventWithId(message);
   if (receivedEventIds.has(event.id)) {
-    Logger.warn(`⚠️ Not rebroadcasting duplicate message: ${event.id}`);
+    Logger.trace(`⚠️ Not rebroadcasting duplicate message: ${event.id}`);
     return;
   }
 
@@ -259,7 +365,7 @@ async function safePublish(
     await new Promise((resolve) => setTimeout(resolve, delay));
   }
 
-  Logger.warn(`❌ Failed to publish to ${topic} after ${maxRetries} attempts.`);
+  Logger.warn(`⛔ Failed to publish to ${topic} after ${maxRetries} attempts.`);
   return Promise.resolve();
 }
 
@@ -270,16 +376,17 @@ function generateEventWithId(event: NodeMessage): NodeEvent {
     type: event.type,
   };
 }
+//============= STOP: Publish to node
 
-setInterval(() => {
-  if (isMaster) return; // Skip if already master
-
-  if (!currentMasterId) {
-    Logger.warn("🚨 Master node is missing, starting election...");
-    startElection();
-  }
-}, 10000); // Check for master failure every 10 seconds
-
+//============= START: Node maintanance
+// Erase messages id every 15 seconds
 setInterval(() => {
   receivedEventIds.clear();
-}, 15000); // Erase messages id every 15 seconds
+}, 15000);
+
+setTimeout(() => {
+  safePublish(topics.BLOCKCHAIN_TOPIC, {
+    type: "REQUEST_SYNC_BLOCKCHAIN_SERVER",
+  });
+}, 10000);
+//============= STOP: Node maintanance

@@ -3,12 +3,28 @@ import { StorageService } from "./storage-service.js";
 import { Logger } from "./logger.js";
 
 export class Blockchain {
-  chain: Block[];
-  difficulty: number;
+  private _chain: Block[];
+  private _difficulty: number;
 
   constructor(chain: Block[], difficulty = 2) {
-    this.chain = chain;
-    this.difficulty = difficulty;
+    this._chain = chain;
+    this._difficulty = difficulty;
+  }
+
+  add(block: Block) {
+    this._chain.push(block);
+  }
+
+  replace(chain: Block[]) {
+    this._chain = chain;
+  }
+
+  get chain() {
+    return this._chain;
+  }
+
+  get difficulty() {
+    return this._difficulty;
   }
 }
 
@@ -59,7 +75,7 @@ class BlockchainService {
   }
 
   private set chain(chain: Block[]) {
-    this._blockchain.chain = chain;
+    this._blockchain.replace(chain);
   }
 
   private get difficulty() {
@@ -71,15 +87,12 @@ class BlockchainService {
     this._blockchain = this.createOrLoadBlockchain();
   }
 
-  private createOrLoadBlockchain() {
+  private createOrLoadBlockchain(): Blockchain {
     const data = this.storage.loadData();
     if (data) {
       return data;
     } else {
-      return {
-        chain: [],
-        difficulty: 2,
-      };
+      return new Blockchain([this.createGenesisBlock()], 2);
     }
   }
 
@@ -90,23 +103,16 @@ class BlockchainService {
       FIXED_GENESIS_BLOCK.timestamp,
       FIXED_GENESIS_BLOCK.previousHash
     );
-    block.hash = this.calculateHash(block);
+    block.hash = this.generateHash(block);
     return block;
   }
 
-  startChain() {
-    if (this.chain.length === 0) {
-      this._blockchain.chain = [this.createGenesisBlock()];
-      this.saveChain();
-    }
-  }
-
-  loadChainFromNetwork(chain: Block[]) {
-    this.chain = chain;
+  loadChainFromNetwork(blockchain: Blockchain) {
+    this._blockchain = blockchain;
     this.saveChain();
   }
 
-  getLatestBlock() {
+  private getLatestBlock() {
     return this.chain[this.chain.length - 1];
   }
 
@@ -141,7 +147,7 @@ class BlockchainService {
     const currentAndPreviousBlockHaveDifferentIndex =
       newBlock.index !== previousBlock.index;
     const currentBlockHasValidHash =
-      newBlock.hash === this.calculateHash(newBlock);
+      newBlock.hash === this.generateHash(newBlock);
 
     Logger.debug(
       `Block status: ${newBlock.index} : ${newBlock.hash}
@@ -181,7 +187,7 @@ class BlockchainService {
     this.logChain();
   }
 
-  private calculateHash({
+  private generateHash({
     index,
     timestamp,
     data,
@@ -196,9 +202,9 @@ class BlockchainService {
 
   private async mine(block: Block): Promise<Block> {
     block.nonce = 0;
-    block.hash = this.calculateHash(block);
+    block.hash = "";
 
-    const delay = Math.floor(Math.random() * 5000) + 1000; // ⏳ Random delay between 1-5 seconds
+    const delay = Math.floor(Math.random() * 3000) + 1000; // ⏳ Random delay between 1-3 seconds
     Logger.debug(
       `⏳ Simulating processing time: Waiting ${
         delay / 1000
@@ -216,7 +222,7 @@ class BlockchainService {
         return block; // ✅ Stop mining if another block has been accepted
       }
       block.nonce++;
-      block.hash = this.calculateHash(block);
+      block.hash = this.generateHash(block);
     }
     this.checkValid(block);
     Logger.info(`⛏️ Mined new block: ${block.hash}`);
@@ -224,13 +230,17 @@ class BlockchainService {
   }
 
   checkValid(block: Block) {
-    block.valid = block.hash == this.calculateHash(block);
+    block.valid = block.hash == this.generateHash(block);
   }
 
   private logChain() {
     console.log("<=><=><=><=><=><=><=><=><=><=>");
     console.log(this.chain);
     console.log("<=><=><=><=><=><=><=><=><=><=>");
+  }
+
+  isValid(block: Block) {
+    return this.isValidNewBlock(block, this.getLatestBlock());
   }
 
   getChainStatus() {
@@ -243,7 +253,7 @@ class BlockchainService {
         errors.push(
           `The block #${
             currentBlock.index
-          } is invalid. Calculated hash: ${this.calculateHash(currentBlock)}`
+          } is invalid. Calculated hash: ${this.generateHash(currentBlock)}`
         );
       }
 
@@ -267,6 +277,7 @@ class BlockchainService {
     return {
       chain: this.chain,
       status: this.getChainStatus(),
+      difficulty: this.difficulty,
     };
   }
 

@@ -24,9 +24,9 @@ export class StorageService {
       Logger.trace(`${this.fileName} written successfully`);
     } catch (error) {
       Logger.error(`Error writing data: ${JSON.stringify(error)}`);
+      throw error;
     }
   }
-
   loadData(): Blockchain | null {
     try {
       if (!fs.existsSync(this.filePath)) {
@@ -38,7 +38,7 @@ export class StorageService {
       return JSON.parse(fileData);
     } catch (error) {
       Logger.error(`Error reading ${this.fileName} : ${JSON.stringify(error)}`);
-      return null;
+      throw error;
     }
   }
 }
