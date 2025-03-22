@@ -34,7 +34,7 @@ let currentMasterId: string | null = null; // Stores the current master node ID
 type MessageId = string | null;
 
 let votes: { [peerId: string]: boolean } = {};
-let totalPeers = 1;
+//let totalPeers = 1;
 
 const node = await createLibp2p({
   addresses: {
@@ -73,7 +73,7 @@ node.addEventListener("peer:discovery", (event) => {
 });
 
 async function peerDiscovery(peerId: any) {
-  totalPeers += 1;
+  //totalPeers += 1;
   await node
     .dial(peerId)
     .catch((err) => Logger.error(`❌ Failed to connect to peer: ${err}`));
@@ -82,7 +82,7 @@ async function peerDiscovery(peerId: any) {
 node.addEventListener("peer:disconnect", (event) => {
   const peerId = event.detail.toString();
   Logger.info(`❌ Peer disconnected: ${peerId}`);
-  totalPeers -= 1;
+  //totalPeers -= 1;
   checkIfMasterNode(peerId);
 });
 
@@ -157,7 +157,7 @@ function handleVoteResponse(data: any) {
 function handleVoteRequest(data: any) {
   Logger.info(`📩 Received vote request for block: ${data.block.hash}`);
 
-  const isValid = blockchain.checkValid(data.block);
+  const isValid = blockchain.isValid(data.block);
   safePublish(topics.VOTE_TOPIC, {
     type: "VOTE_RESPONSE",
     data: {
@@ -198,6 +198,7 @@ async function handleCreateBlock(blockData: any) {
 }
 
 function handleAddBlock(block: any) {
+  Logger.debug(`Block to be added: ${JSON.stringify(block)}`);
   if (blockchain.addBlock(block)) {
     Logger.info(
       `✅ Block acepted into the chain: ${block.index} : ${block.hash}`
@@ -211,6 +212,9 @@ function handleAddBlock(block: any) {
 function finalizeBlockDecision() {
   if (!pendingBlock) return;
 
+  const totalPeers = node.services.pubsub.getSubscribers(
+    topics.BLOCKCHAIN_TOPIC
+  ).length;
   const totalVotes = Object.keys(votes).length;
   const yesVotes = Object.values(votes).filter((v) => v).length;
 
@@ -221,10 +225,12 @@ function finalizeBlockDecision() {
   );
 
   if (totalVotes > 0 && yesVotes >= Math.ceil(totalPeers / 2) - 1) {
-    Logger.info(`✅ Block accepted by majority: ${pendingBlock.hash}`);
+    Logger.debug(
+      `✅ Block accepted by majority: ${JSON.stringify(pendingBlock)}`
+    );
     safePublish(topics.BLOCKCHAIN_TOPIC, {
       type: "ADD_BLOCK",
-      data: { pendingBlock },
+      data: pendingBlock,
     });
   } else {
     Logger.warn(`❌ Block rejected by majority: ${pendingBlock.hash}`);
@@ -246,7 +252,7 @@ function broadcastBlockchain() {
 //============= START: Elect master node (leader-election)
 function checkIfMasterNode(peerId: string) {
   if (currentMasterId === peerId) {
-    Logger.warn(
+    Logger.debug(
       `🚨 Master node ${peerId} has disconnected. 🗳️ Starting re-election...`
     );
     currentMasterId = null;
@@ -327,7 +333,7 @@ setInterval(() => {
 async function safePublish(
   topic: TopicName,
   message: NodeMessage,
-  maxRetries = 3,
+  maxRetries = 1,
   delay = 1000
 ) {
   const event = generateEventWithId(message);

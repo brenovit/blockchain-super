@@ -129,7 +129,7 @@ class BlockchainService {
     Logger.info(
       `Adding block to the chain: ${newBlock.index} : ${newBlock.hash}`
     );
-    if (this.isValidNewBlock(newBlock, this.getLatestBlock())) {
+    if (this.isValid(newBlock)) {
       this.chain.push(newBlock);
       this.saveChain();
       this.logChain();
@@ -229,8 +229,12 @@ class BlockchainService {
     return block;
   }
 
-  checkValid(block: Block) {
+  private checkValid(block: Block) {
     block.valid = block.hash == this.generateHash(block);
+  }
+
+  isValid(block: Block) {
+    return this.isValidNewBlock(block, this.getLatestBlock());
   }
 
   private logChain() {
@@ -239,11 +243,7 @@ class BlockchainService {
     console.log("<=><=><=><=><=><=><=><=><=><=>");
   }
 
-  isValid(block: Block) {
-    return this.isValidNewBlock(block, this.getLatestBlock());
-  }
-
-  getChainStatus() {
+  private getChainStatus() {
     const errors: string[] = [];
     for (let i = 0; i < this.chain.length; i++) {
       const currentBlock = this.chain[i];
