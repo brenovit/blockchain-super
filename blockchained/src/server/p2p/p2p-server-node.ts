@@ -4,13 +4,12 @@ import { noise } from "@chainsafe/libp2p-noise";
 import { gossipsub } from "@chainsafe/libp2p-gossipsub";
 import { yamux } from "@chainsafe/libp2p-yamux";
 import { Logger } from "../../utils/logger.js";
-import { BlockchainService } from "../../blockchain/service/blockchain-service.js";
 import { identify } from "@libp2p/identify";
 import { mdns } from "@libp2p/mdns";
 import { NodeEvent, NodeMessage } from "../node-event.js";
 import crypto from "crypto";
-import { Block } from "../../blockchain/model/blockchain.js";
-import { TopicName } from "./p2pTopic.js";
+import { TopicName } from "./p2p-topic.js";
+import { checkIfMasterNodeDisconnected } from "./election-flow.js";
 
 type MessageId = string | null;
 
@@ -34,6 +33,25 @@ await node.start();
 
 export const MY_ID = node.peerId.toString();
 Logger.info(`🚀 libp2p Node started: ${MY_ID}`);
+
+node.addEventListener("peer:discovery", (event) => {
+  Logger.info(`🔍 Discovered new peer: ${event.detail.id}`);
+  peerDiscovery(event.detail.id);
+});
+
+async function peerDiscovery(peerId: any) {
+  //totalPeers += 1;
+  await node
+    .dial(peerId)
+    .catch((err) => Logger.error(`❌ Failed to connect to peer: ${err}`));
+}
+
+node.addEventListener("peer:disconnect", (event) => {
+  const peerId = event.detail.toString();
+  Logger.info(`❌ Peer disconnected: ${peerId}`);
+  //totalPeers -= 1;
+  checkIfMasterNodeDisconnected(peerId);
+});
 
 //============= START: Publish to node
 async function safePublish(

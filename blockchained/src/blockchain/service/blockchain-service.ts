@@ -177,11 +177,11 @@ export class BlockchainService {
     return this.chain[this.chain.length - 1];
   }
 
-  private getChainStatus() {
+  checkChainValid(blockchain: Blockchain) {
     const errors: string[] = [];
-    for (let i = 0; i < this.chain.length; i++) {
-      const currentBlock = this.chain[i];
-      const previousBlock = this.chain[i - 1];
+    for (let i = 0; i < blockchain.chain.length; i++) {
+      const currentBlock = blockchain.chain[i];
+      const previousBlock = blockchain.chain[i - 1];
 
       if (!currentBlock.valid) {
         errors.push(
@@ -222,7 +222,7 @@ export class BlockchainService {
   get data() {
     return {
       chain: this.chain,
-      status: this.getChainStatus(),
+      status: this.checkChainValid(this._blockchain),
       difficulty: this.difficulty,
     };
   }
