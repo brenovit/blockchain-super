@@ -1,61 +1,7 @@
 import crypto from "crypto";
-import { StorageService } from "./storage-service.js";
-import { Logger } from "./logger.js";
-
-export class Blockchain {
-  private _chain: Block[];
-  private _difficulty: number;
-
-  constructor(chain: Block[], difficulty = 2) {
-    this._chain = chain;
-    this._difficulty = difficulty;
-  }
-
-  add(block: Block) {
-    this._chain.push(block);
-  }
-
-  replace(chain: Block[]) {
-    this._chain = chain;
-  }
-
-  get chain() {
-    return this._chain;
-  }
-
-  get difficulty() {
-    return this._difficulty;
-  }
-}
-
-interface BlockData {
-  clientId: string;
-  data: any;
-}
-
-class Block {
-  index: number;
-  timestamp: string;
-  data: BlockData;
-  previousHash: string;
-  hash: string = "";
-  nonce: number;
-  valid: boolean;
-
-  constructor(
-    data: BlockData,
-    index = 0,
-    timestamp = new Date().toISOString(),
-    previousHash = ""
-  ) {
-    this.index = index;
-    this.timestamp = timestamp;
-    this.data = data;
-    this.previousHash = previousHash;
-    this.nonce = 0;
-    this.valid = true;
-  }
-}
+import { StorageService } from "../storage/storage-service.js";
+import { Logger } from "../../utils/logger.js";
+import { Block, Blockchain } from "../model/blockchain.js";
 
 const FIXED_GENESIS_BLOCK = {
   index: 0,
@@ -65,22 +11,10 @@ const FIXED_GENESIS_BLOCK = {
   nonce: 0,
 };
 
-class BlockchainService {
+export class BlockchainService {
   private _blockchain: Blockchain;
 
   private storage: StorageService;
-
-  private get chain() {
-    return this._blockchain.chain;
-  }
-
-  private set chain(chain: Block[]) {
-    this._blockchain.replace(chain);
-  }
-
-  private get difficulty() {
-    return this._blockchain.difficulty;
-  }
 
   constructor(identifier: any) {
     this.storage = new StorageService(identifier);
@@ -112,10 +46,6 @@ class BlockchainService {
     this.saveChain();
   }
 
-  private getLatestBlock() {
-    return this.chain[this.chain.length - 1];
-  }
-
   async createBlock(data: any): Promise<Block> {
     Logger.info("Creating new block to be added in the chain");
     const newBlock = new Block(data);
@@ -136,6 +66,10 @@ class BlockchainService {
       return true;
     }
     return false;
+  }
+
+  isValid(block: Block) {
+    return this.isValidNewBlock(block, this.getLatestBlock());
   }
 
   private isValidNewBlock(newBlock: Block, previousBlock: Block) {
@@ -162,16 +96,16 @@ class BlockchainService {
     );
   }
 
-  mineBlock(index: number) {
+  /*mineBlock(index: number) {
     Logger.info("Mining block: " + index);
     const block = this.chain[index];
     this.mine(block);
     this.saveChain();
     this.logChain();
     return block;
-  }
+  }*/
 
-  updateBlock(payload: any) {
+  /*updateBlock(payload: any) {
     Logger.info("Updating block: " + JSON.stringify(payload));
     const block = this.chain[payload.index];
     if (!block) {
@@ -185,7 +119,7 @@ class BlockchainService {
     Logger.info("Block updated");
     this.saveChain();
     this.logChain();
-  }
+  }*/
 
   private generateHash({
     index,
@@ -233,14 +167,14 @@ class BlockchainService {
     block.valid = block.hash == this.generateHash(block);
   }
 
-  isValid(block: Block) {
-    return this.isValidNewBlock(block, this.getLatestBlock());
-  }
-
   private logChain() {
     console.log("<=><=><=><=><=><=><=><=><=><=>");
     console.log(this.chain);
     console.log("<=><=><=><=><=><=><=><=><=><=>");
+  }
+
+  private getLatestBlock() {
+    return this.chain[this.chain.length - 1];
   }
 
   private getChainStatus() {
@@ -273,6 +207,18 @@ class BlockchainService {
     this.storage.saveData(this._blockchain);
   }
 
+  private get chain() {
+    return this._blockchain.chain;
+  }
+
+  private set chain(chain: Block[]) {
+    this._blockchain.replace(chain);
+  }
+
+  private get difficulty() {
+    return this._blockchain.difficulty;
+  }
+
   get data() {
     return {
       chain: this.chain,
@@ -285,5 +231,3 @@ class BlockchainService {
     return this.chain.length;
   }
 }
-
-export { BlockchainService, Block };

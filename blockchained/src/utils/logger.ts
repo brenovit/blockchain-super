@@ -24,7 +24,7 @@ export class Logger {
         break;
     }
 
-    console.log(`${color}[${timestamp}] [${level}] ${message}\x1b[0m`);
+    console.log(`[${timestamp}] ${color}[${level}] ${message}\x1b[0m`);
   }
 
   static trace(message: string) {

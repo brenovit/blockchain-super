@@ -3,12 +3,13 @@ import { webSockets } from "@libp2p/websockets";
 import { noise } from "@chainsafe/libp2p-noise";
 import { gossipsub } from "@chainsafe/libp2p-gossipsub";
 import { yamux } from "@chainsafe/libp2p-yamux";
-import { Logger } from "./logger.js";
-import { Block, BlockchainService } from "./blockchain-service.js";
+import { Logger } from "../../utils/logger.js";
+import { BlockchainService } from "../../blockchain/service/blockchain-service.js";
 import { identify } from "@libp2p/identify";
 import { mdns } from "@libp2p/mdns";
-import { NodeEvent, NodeMessage } from "./node-event.js";
+import { NodeEvent, NodeMessage } from "../node-event.js";
 import crypto from "crypto";
+import { Block } from "../../blockchain/model/blockchain.js";
 
 const INITIAL_ID = 1;
 const argId = process.argv.slice(2)[0] ?? INITIAL_ID;
@@ -122,10 +123,6 @@ function handleEvent(message: any) {
     case "ADD_BLOCK":
       handleAddBlock(event.data);
       break;
-    case "MINE_BLOCK":
-      blockchain.mineBlock(event.data);
-      broadcastBlockchain();
-      break;
     case "VOTE_RESPONSE":
       handleVoteResponse(event.data);
       break;
@@ -135,7 +132,7 @@ function handleEvent(message: any) {
     case "BLOCKCHAIN": //Handled by from client
       break;
     default:
-      Logger.warn(`Unknown event type: ${event.type}`);
+      Logger.warn(`Unknown/unmapped event type: ${event.type}`);
   }
 }
 

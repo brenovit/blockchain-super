@@ -6,8 +6,8 @@ import { yamux } from "@chainsafe/libp2p-yamux";
 import { identify } from "@libp2p/identify";
 import { mdns } from "@libp2p/mdns";
 import { WebSocketServer, WebSocket } from "ws";
-import { Logger } from "./logger.js";
-import { NodeEvent, NodeMessage } from "./node-event.js";
+import { Logger } from "../../utils/logger.js";
+import { NodeEvent, NodeMessage } from "../node-event.js";
 import crypto from "crypto";
 
 const WS_PORT = 5000;

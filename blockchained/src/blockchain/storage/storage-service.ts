@@ -1,8 +1,8 @@
 import * as fs from "fs";
 import * as path from "path";
-import { Blockchain } from "./blockchain-service.js";
-import { Logger } from "./logger.js";
+import { Logger } from "../../utils/logger.js";
 import { fileURLToPath } from "url";
+import { Blockchain } from "../model/blockchain.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

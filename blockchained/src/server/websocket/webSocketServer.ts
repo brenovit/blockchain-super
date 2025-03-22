@@ -1,6 +1,6 @@
 import { WebSocketServer, WebSocket } from "ws";
-import { BlockchainService } from "./blockchain-service.js";
-import { Logger } from "./logger.js";
+import { BlockchainService } from "../../blockchain/service/blockchain-service.js";
+import { Logger } from "../../utils/logger.js";
 
 const DEFAULT_PORT = 5000;
 
@@ -46,17 +46,17 @@ function startWebSocketServer(port: number) {
           sendBlockchain();
           break;
         case "MINE_BLOCK":
-          blockchain.mineBlock(event.data);
+          //blockchain.mineBlock(event.data);
           sendBlockchain();
           break;
         case "UPDATE_BLOCK":
-          blockchain.updateBlock({
+          /*blockchain.updateBlock({
             ...event.data,
             data: {
               data: event.data.data,
               clientId: event.clientId,
             },
-          });
+          });*/
           sendBlockchain();
           break;
         default:

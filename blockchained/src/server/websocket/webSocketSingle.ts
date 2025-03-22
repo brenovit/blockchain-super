@@ -3,8 +3,8 @@ import { v4 as uuidv4 } from "uuid"; // Import UUID generator
 import express from "express";
 import cors from "cors";
 import bodyParser from "body-parser";
-import { Logger } from "./logger.js";
-import { BlockchainService } from "./blockchain-service.js";
+import { Logger } from "../../utils/logger.js";
+import { BlockchainService } from "../../blockchain/service/blockchain-service.js";
 
 const clients = new Map<string, WebSocket>(); // Store clients with their unique IDs
 
@@ -45,18 +45,18 @@ wss.on("connection", (ws) => {
         sendBlockchain();
         break;
       case "MINE_BLOCK":
-        blockchain.mineBlock(event.data);
+        //blockchain.mineBlock(event.data);
         sendBlockchain();
         break;
 
       case "UPDATE_BLOCK":
-        blockchain.updateBlock({
+        /*blockchain.updateBlock({
           ...event.data,
           data: {
             data: event.data.data,
             clientId: event.clientId,
           },
-        });
+        });*/
         sendBlockchain();
         break;
       default:
@@ -106,8 +106,8 @@ app.post("/mine-block/:index", (req: any, res: any) => {
     return res.status(400).json({ error: "index is required" });
   }
 
-  const minedBlock = blockchain.mineBlock(index);
-  res.json(minedBlock);
+  //const minedBlock = blockchain.mineBlock(index);
+  //res.json(minedBlock);
 });
 
 app.post("/update-block", (req: any, res: any) => {
@@ -116,8 +116,8 @@ app.post("/update-block", (req: any, res: any) => {
     return res.status(400).json({ error: "Data is required" });
   }
 
-  const minedBlock = blockchain.updateBlock(data);
-  res.json(minedBlock);
+  //const minedBlock = blockchain.updateBlock(data);
+  //res.json(minedBlock);
 });
 
 const PORT = 3001;

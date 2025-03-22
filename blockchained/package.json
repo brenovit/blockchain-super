@@ -17,9 +17,9 @@
     "build": "rm -rf dist && tsc",
     "start": "node dist/p2pServer.js",
     "start:custom": "start --id",
-    "client": "rm -rf dist && tsc && node dist/p2pClient.js",
-    "server": "rm -rf dist && tsc && node dist/p2pServer.js",
-    "server:custom": "rm -rf dist && tsc && node dist/p2pServer.js --id",
+    "client": "rm -rf dist && tsc && node dist/server/p2p/p2pClient.js",
+    "server": "rm -rf dist && tsc && node dist/server/p2p/p2pServer.js",
+    "server:custom": "rm -rf dist && tsc && node dist/server/p2p/p2pServer.js --id",
     "socketServer": "npx ts-node src/webSocketSingle.ts",
     "socketServer:custom": "socketServer --port",
     "test": "echo \"Error: no test specified\" && exit 1"

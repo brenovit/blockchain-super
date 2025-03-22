@@ -1,8 +1,8 @@
-import { BlockchainService } from "./blockchain-service.js";
+import { BlockchainService } from "../../blockchain/service/blockchain-service.js";
 import express from "express";
 import cors from "cors";
 import bodyParser from "body-parser";
-import { Logger } from "./logger.js";
+import { Logger } from "../../utils/logger.js";
 
 const DEFAULT_PORT = 2000;
 const argPort = process.argv.slice(2)[0] ?? DEFAULT_PORT;
