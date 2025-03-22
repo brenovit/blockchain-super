@@ -7,9 +7,17 @@ import { Logger } from "../../utils/logger.js";
 import { BlockchainService } from "../../blockchain/service/blockchain-service.js";
 import { identify } from "@libp2p/identify";
 import { mdns } from "@libp2p/mdns";
-import { NodeEvent, NodeMessage } from "../node-event.js";
+import { EventType, NodeEvent, NodeMessage } from "../node-event.js";
 import crypto from "crypto";
 import { Block } from "../../blockchain/model/blockchain.js";
+import {
+  addEvent,
+  hasEvent,
+  MY_ID,
+  node,
+  safePublish,
+} from "./p2pServerNode.js";
+import { Topics } from "./p2pTopic.js";
 
 const INITIAL_ID = 1;
 const argId = process.argv.slice(2)[0] ?? INITIAL_ID;
@@ -18,51 +26,18 @@ const blockchainNodeId = Number(argId);
 Logger.info(`🚀 Starting blockchain node with id: ${blockchainNodeId}`);
 const blockchain = new BlockchainService(blockchainNodeId);
 
-type TopicName = "blockchain" | "leader-election" | "vote";
-
-const ELECTION_TOPIC: TopicName = "leader-election";
-const VOTE_TOPIC: TopicName = "vote";
-const BLOCKCHAIN_TOPIC: TopicName = "blockchain";
-
-const topics = {
-  ELECTION_TOPIC,
-  VOTE_TOPIC,
-  BLOCKCHAIN_TOPIC,
-};
-
 let isMaster = false; // Tracks if the node is master
 let currentMasterId: string | null = null; // Stores the current master node ID
-type MessageId = string | null;
 
 let votes: { [peerId: string]: boolean } = {};
-//let totalPeers = 1;
-
-const node = await createLibp2p({
-  addresses: {
-    listen: ["/ip4/127.0.0.1/tcp/0/ws"], // Listen on a random available port
-  },
-  transports: [webSockets()],
-  connectionEncrypters: [noise()],
-  streamMuxers: [yamux()],
-  peerDiscovery: [mdns()],
-  services: {
-    pubsub: gossipsub(),
-    indentify: identify(),
-  },
-});
-
-await node.start();
-const myId = node.peerId.toString();
-Logger.info(`🚀 libp2p Node started: ${myId}`);
-const receivedEventIds = new Set<MessageId>(); // ✅ Track processed messages
 
 let processingBlock = false;
 let pendingBlock: Block | null = null;
 
-// Subscribe to topics
-await node.services.pubsub.subscribe(BLOCKCHAIN_TOPIC);
-await node.services.pubsub.subscribe(ELECTION_TOPIC);
-await node.services.pubsub.subscribe(VOTE_TOPIC);
+// Subscribe to Topics
+await node.services.pubsub.subscribe(Topics.BLOCKCHAIN);
+await node.services.pubsub.subscribe(Topics.ELECTION);
+await node.services.pubsub.subscribe(Topics.VOTE);
 
 //listen to messages
 node.services.pubsub.addEventListener("message", handleEvent);
@@ -92,12 +67,12 @@ function handleEvent(message: any) {
     new TextDecoder().decode(message.detail.data)
   ) as NodeEvent;
 
-  if (event.id && receivedEventIds.has(event.id)) {
+  if (event.id && hasEvent(event.id)) {
     Logger.trace(`⚠️ Ignoring duplicated event: ${event.type} : ${event.id}`);
     return;
   }
   if (event.id) {
-    receivedEventIds.add(event.id);
+    addEvent(event.id);
   }
   Logger.trace(`📩 Received event: ${event.type} : ${event.id}`);
 
@@ -139,8 +114,8 @@ function handleEvent(message: any) {
 function handleSyncNodes(event: any) {
   if (isMaster) {
     Logger.info(`🚀 Master node sending blockchain to ${event.sender}`);
-    safePublish(topics.BLOCKCHAIN_TOPIC, {
-      type: "BLOCKCHAIN_UPDATE",
+    safePublish(Topics.BLOCKCHAIN, {
+      type: EventType.BLOCKCHAIN_UPDATE,
       data: blockchain.data,
     });
   }
@@ -155,12 +130,12 @@ function handleVoteRequest(data: any) {
   Logger.info(`📩 Received vote request for block: ${data.block.hash}`);
 
   const isValid = blockchain.isValid(data.block);
-  safePublish(topics.VOTE_TOPIC, {
-    type: "VOTE_RESPONSE",
+  safePublish(Topics.VOTE, {
+    type: EventType.VOTE_RESPONSE,
     data: {
       blockHash: data.block.hash,
       vote: isValid,
-      voter: myId,
+      voter: MY_ID,
     },
   });
 }
@@ -179,11 +154,11 @@ async function handleCreateBlock(blockData: any) {
     votes = {};
     Logger.info(`🗳️ Requesting votes for new block: ${newBlock.hash}`);
 
-    safePublish(topics.VOTE_TOPIC, {
-      type: "VOTE_REQUEST",
+    safePublish(Topics.VOTE, {
+      type: EventType.VOTE_REQUEST,
       data: {
         block: newBlock,
-        proposer: myId,
+        proposer: MY_ID,
       },
     });
 
@@ -210,7 +185,7 @@ function finalizeBlockDecision() {
   if (!pendingBlock) return;
 
   const totalPeers = node.services.pubsub.getSubscribers(
-    topics.BLOCKCHAIN_TOPIC
+    Topics.BLOCKCHAIN
   ).length;
   const totalVotes = Object.keys(votes).length;
   const yesVotes = Object.values(votes).filter((v) => v).length;
@@ -225,8 +200,8 @@ function finalizeBlockDecision() {
     Logger.debug(
       `✅ Block accepted by majority: ${JSON.stringify(pendingBlock)}`
     );
-    safePublish(topics.BLOCKCHAIN_TOPIC, {
-      type: "ADD_BLOCK",
+    safePublish(Topics.BLOCKCHAIN, {
+      type: EventType.ADD_BLOCK,
       data: pendingBlock,
     });
   } else {
@@ -239,8 +214,8 @@ function finalizeBlockDecision() {
 function broadcastBlockchain() {
   if (isMaster) {
     Logger.trace("📡 Broadcasting blockchain...");
-    safePublish(BLOCKCHAIN_TOPIC, {
-      type: "BLOCKCHAIN",
+    safePublish(Topics.BLOCKCHAIN, {
+      type: EventType.BLOCKCHAIN,
       data: blockchain.data,
     });
   }
@@ -261,8 +236,8 @@ function handleMasterAnnouncement(masterId: any) {
   setNodeAsMaster(masterId);
   if (isMaster) {
     //blockchain.startChain();
-    safePublish(BLOCKCHAIN_TOPIC, {
-      type: "BLOCKCHAIN_UPDATE",
+    safePublish(Topics.BLOCKCHAIN, {
+      type: EventType.BLOCKCHAIN_UPDATE,
       data: blockchain.data,
     });
   }
@@ -270,7 +245,7 @@ function handleMasterAnnouncement(masterId: any) {
 
 function setNodeAsMaster(nodeId: string) {
   currentMasterId = nodeId;
-  isMaster = currentMasterId === myId;
+  isMaster = currentMasterId === MY_ID;
   if (isMaster) {
     Logger.debug(`👑 I am the new master: ${nodeId}`);
   } else {
@@ -281,10 +256,10 @@ function setNodeAsMaster(nodeId: string) {
 function handleElection(electId: any) {
   Logger.debug(`🗳️ Starting election...`);
   if (isMaster) {
-    Logger.debug(`👑 I am already the new master: ${myId}`);
-    safePublish(ELECTION_TOPIC, {
-      type: "MASTER_ANNOUNCEMENT",
-      data: myId,
+    Logger.debug(`👑 I am already the new master: ${MY_ID}`);
+    safePublish(Topics.ELECTION, {
+      type: EventType.MASTER_ANNOUNCEMENT,
+      data: MY_ID,
     });
     return; // Skip if already master
   }
@@ -298,19 +273,19 @@ function startElection() {
   Logger.debug("🎭 Starting leader election...");
   const delay = Math.floor(Math.random() * 3000) + 1000; // ⏳ Random delay between 1-3 seconds
 
-  safePublish(ELECTION_TOPIC, { type: "ELECTION", data: myId });
+  safePublish(Topics.ELECTION, { type: EventType.ELECTION, data: MY_ID });
   Logger.debug(`⏳ Waiting ${delay / 1000} seconds before elect master...`);
   setTimeout(() => {
     if (!currentMasterId) {
-      electNodeAsMaster(myId);
+      electNodeAsMaster(MY_ID);
     }
   }, delay);
 }
 
 function electNodeAsMaster(nodeId: string) {
   setNodeAsMaster(nodeId);
-  safePublish(ELECTION_TOPIC, {
-    type: "MASTER_ANNOUNCEMENT",
+  safePublish(Topics.ELECTION, {
+    type: EventType.MASTER_ANNOUNCEMENT,
     data: nodeId,
   });
 }
@@ -318,7 +293,6 @@ function electNodeAsMaster(nodeId: string) {
 // Check for master failure every 10 seconds
 setInterval(() => {
   if (isMaster) return; // Skip if already master
-
   if (!currentMasterId) {
     Logger.warn("🚨 Master node is missing, starting election...");
     startElection();
@@ -326,70 +300,11 @@ setInterval(() => {
 }, 5000);
 //============= STOP: Elect master node (leader-election)
 
-//============= START: Publish to node
-async function safePublish(
-  topic: TopicName,
-  message: NodeMessage,
-  maxRetries = 1,
-  delay = 1000
-) {
-  const event = generateEventWithId(message);
-  if (receivedEventIds.has(event.id)) {
-    Logger.trace(`⚠️ Not rebroadcasting duplicate message: ${event.id}`);
-    return;
-  }
-
-  receivedEventIds.add(event.id);
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    const peers = node.services.pubsub.getSubscribers(topic);
-
-    if (peers.length > 0) {
-      try {
-        Logger.trace(
-          `📡 Publishing to topic [${topic}] | ${event.type} : ${event.id} | Attemp: ${attempt}/${maxRetries}`
-        );
-        return await node.services.pubsub.publish(
-          topic,
-          new TextEncoder().encode(JSON.stringify(event))
-        );
-      } catch (error) {
-        Logger.error(
-          `❌ Error publishing on attemp ${attempt}/${maxRetries}: ${error}`
-        );
-      }
-    } else {
-      Logger.warn(
-        `⚠️ No peers subscribed to ${topic}. Attemp ${attempt}/${maxRetries}. Retrying in ${
-          delay / 1000
-        } seconds...`
-      );
-    }
-
-    await new Promise((resolve) => setTimeout(resolve, delay));
-  }
-
-  Logger.warn(`⛔ Failed to publish to ${topic} after ${maxRetries} attempts.`);
-  return Promise.resolve();
-}
-
-function generateEventWithId(event: NodeMessage): NodeEvent {
-  return {
-    id: crypto.createHash("sha1").update(JSON.stringify(event)).digest("hex"),
-    data: event.data,
-    type: event.type,
-  };
-}
-//============= STOP: Publish to node
-
 //============= START: Node maintanance
-// Erase messages id every 15 seconds
-setInterval(() => {
-  receivedEventIds.clear();
-}, 15000);
 
 setTimeout(() => {
-  safePublish(topics.BLOCKCHAIN_TOPIC, {
-    type: "REQUEST_SYNC_BLOCKCHAIN_SERVER",
+  safePublish(Topics.BLOCKCHAIN, {
+    type: EventType.REQUEST_SYNC_BLOCKCHAIN_SERVER,
   });
 }, 10000);
 //============= STOP: Node maintanance

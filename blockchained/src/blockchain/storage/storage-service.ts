@@ -1,11 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import { Logger } from "../../utils/logger.js";
-import { fileURLToPath } from "url";
 import { Blockchain } from "../model/blockchain.js";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 export class StorageService {
   identifier: string;
@@ -15,7 +11,15 @@ export class StorageService {
   constructor(identifier: any) {
     this.identifier = identifier;
     this.fileName = `blockchain-${this.identifier}.json`;
-    this.filePath = path.join(__dirname, "../data/".concat(this.fileName));
+    // Resolve folder from the project root
+    const dataDir = path.resolve(process.cwd(), "data");
+    // Ensure the directory exists
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+
+    this.filePath = path.join(dataDir, this.fileName);
+    Logger.trace("Saving blockchain file to: " + this.filePath);
   }
 
   saveData(data: Blockchain) {
