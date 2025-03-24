@@ -1,6 +1,6 @@
 import { Logger } from "../../utils/logger.js";
 import { BlockchainService } from "../../blockchain/service/blockchain-service.js";
-import { EventType, NodeEvent, NodeMessage } from "../node-event.js";
+import { EventType, NodeEvent } from "../node-event.js";
 import { Block, Blockchain } from "../../blockchain/model/blockchain.js";
 import {
   addEvent,
@@ -12,6 +12,7 @@ import {
 import { Topics } from "./p2p-topic.js";
 import {
   handleElection,
+  handleElectionVoteResponse,
   handleMasterAnnouncement,
   isMaster,
 } from "./election-flow.js";
@@ -23,18 +24,17 @@ const blockchainNodeId = Number(argId);
 Logger.info(`🚀 Starting blockchain node with id: ${blockchainNodeId}`);
 const blockchain = new BlockchainService(blockchainNodeId);
 
-// Subscribe to Topics
-await node.services.pubsub.subscribe(Topics.BLOCKCHAIN);
-await node.services.pubsub.subscribe(Topics.ELECTION);
-await node.services.pubsub.subscribe(Topics.VOTE);
-
 //listen to messages
 node.services.pubsub.addEventListener("message", handleEvent);
 Logger.info(`🌍 Listening for blockchain messages...`);
 
 function handleEvent(message: any) {
+  const messageDetail = message.detail;
+  const messageSender = messageDetail.from;
+  const messageTopic = messageDetail.topic;
+
   const event = JSON.parse(
-    new TextDecoder().decode(message.detail.data)
+    new TextDecoder().decode(messageDetail.data)
   ) as NodeEvent;
 
   if (event.id && hasEvent(event.id)) {
@@ -44,46 +44,52 @@ function handleEvent(message: any) {
   if (event.id) {
     addEvent(event.id);
   }
-  Logger.trace(`📩 Received event: ${event.type} : ${event.id}`);
+  Logger.trace(
+    `📩 Received event: ${messageTopic} | ${event.type} | ${event.id}`
+  );
 
   switch (event.type) {
-    case "MASTER_ANNOUNCEMENT":
+    case EventType.MASTER_ANNOUNCEMENT:
       handleMasterAnnouncement(event.data, blockchain.data);
       break;
-    case "ELECTION":
+    case EventType.ELECTION:
       handleElection(event.data);
       break;
-    case "REQUEST_SYNC_BLOCKCHAIN_SERVER": //Comes from server
-      handleSyncNodes(event);
+    case EventType.REQUEST_SYNC_BLOCKCHAIN_SERVER: //Comes from server
+      handleSyncNodes(messageSender);
       break;
-    case "REQUEST_SYNC_BLOCKCHAIN": //Comes from client
+    case EventType.REQUEST_SYNC_BLOCKCHAIN: //Comes from client
       broadcastBlockchain();
       break;
-    case "BLOCKCHAIN_UPDATE":
+    case EventType.BLOCKCHAIN_UPDATE:
       handleBlockchainUpdate(event.data);
       break;
-    case "CREATE_BLOCK":
+    case EventType.CREATE_BLOCK:
       handleCreateBlock(event.data);
       break;
-    case "ADD_BLOCK":
+    case EventType.ADD_BLOCK:
       handleAddBlock(event.data);
       break;
-    case "VOTE_RESPONSE":
-      handleVoteResponse(event.data);
+    case EventType.VOTE_RESPONSE:
+      if (messageTopic === Topics.ELECTION) {
+        handleElectionVoteResponse(event.data);
+      } else if (messageTopic === Topics.BLOCKCHAIN) {
+        handleVoteResponse(event.data);
+      }
       break;
-    case "VOTE_REQUEST":
+    case EventType.VOTE_REQUEST:
       handleVoteRequest(event.data);
       break;
-    case "BLOCKCHAIN": //Handled by from client
+    case EventType.BLOCKCHAIN: //Handled by from client
       break;
     default:
       Logger.warn(`Unknown/unmapped event type: ${event.type}`);
   }
 }
 
-function handleSyncNodes(event: any) {
+function handleSyncNodes(sender: any) {
   if (isMaster()) {
-    Logger.info(`🚀 Master node sending blockchain to ${event.sender}`);
+    Logger.info(`🚀 Master node requested to send blockchain from ${sender}`);
     safePublish(Topics.BLOCKCHAIN, {
       type: EventType.BLOCKCHAIN_UPDATE,
       data: blockchain.data,
@@ -167,6 +173,7 @@ function finalizeBlockDecision() {
     Logger.debug(
       `✅ Block accepted by majority: ${JSON.stringify(pendingBlock)}`
     );
+    blockchain.addBlock(pendingBlock);
     safePublish(Topics.BLOCKCHAIN, {
       type: EventType.ADD_BLOCK,
       data: pendingBlock,
@@ -211,8 +218,10 @@ function handleVoteRequest(data: any) {
 
 //============= START: Node maintanance
 setTimeout(() => {
+  Logger.trace("request blockchain");
   safePublish(Topics.BLOCKCHAIN, {
     type: EventType.REQUEST_SYNC_BLOCKCHAIN_SERVER,
+    data: new Date().toISOString(),
   });
 }, 10000);
 //============= STOP: Node maintanance

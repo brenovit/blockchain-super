@@ -8,7 +8,7 @@ import { identify } from "@libp2p/identify";
 import { mdns } from "@libp2p/mdns";
 import { NodeEvent, NodeMessage } from "../node-event.js";
 import crypto from "crypto";
-import { TopicName } from "./p2p-topic.js";
+import { TopicName, Topics } from "./p2p-topic.js";
 import { checkIfMasterNodeDisconnected } from "./election-flow.js";
 
 type MessageId = string | null;
@@ -31,6 +31,11 @@ const node = await createLibp2p({
 
 await node.start();
 
+// Subscribe to Topics
+await node.services.pubsub.subscribe(Topics.BLOCKCHAIN);
+await node.services.pubsub.subscribe(Topics.ELECTION);
+await node.services.pubsub.subscribe(Topics.VOTE);
+
 export const MY_ID = node.peerId.toString();
 Logger.info(`🚀 libp2p Node started: ${MY_ID}`);
 
@@ -52,6 +57,10 @@ node.addEventListener("peer:disconnect", (event) => {
   //totalPeers -= 1;
   checkIfMasterNodeDisconnected(peerId);
 });
+
+function getSubscribers(topic: TopicName) {
+  return node.services.pubsub.getSubscribers(topic);
+}
 
 //============= START: Publish to node
 async function safePublish(
@@ -123,4 +132,4 @@ setInterval(() => {
 }, 15000);
 //============= STOP: Node maintanance
 
-export { node, safePublish, hasEvent, addEvent };
+export { node, safePublish, hasEvent, addEvent, getSubscribers };
