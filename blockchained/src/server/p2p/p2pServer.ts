@@ -71,10 +71,10 @@ function handleEvent(message: any) {
       handleAddBlock(event.data);
       break;
     case EventType.VOTE_RESPONSE:
-      if (messageTopic === Topics.ELECTION) {
+      if (messageTopic === Topics.NETWORK_LEADER_ELECTION) {
         handleElectionVoteResponse(event.data);
-      } else if (messageTopic === Topics.BLOCKCHAIN) {
-        handleVoteResponse(event.data);
+      } else if (messageTopic === Topics.BLOCKCHAIN_VOTE) {
+        handleBlockchainVoteResponse(event.data);
       }
       break;
     case EventType.VOTE_REQUEST:
@@ -139,7 +139,7 @@ async function handleCreateBlock(blockData: any) {
     votes = {};
     Logger.info(`🗳️ Requesting votes for new block: ${newBlock.hash}`);
 
-    safePublish(Topics.VOTE, {
+    safePublish(Topics.BLOCKCHAIN_VOTE, {
       type: EventType.VOTE_REQUEST,
       data: {
         block: newBlock,
@@ -197,7 +197,7 @@ function handleAddBlock(block: any) {
   return false;
 }
 
-function handleVoteResponse(data: any) {
+function handleBlockchainVoteResponse(data: any) {
   if (pendingBlock && data.blockHash == pendingBlock.hash) {
     votes[data.voter] = data.vote;
   }
@@ -206,7 +206,7 @@ function handleVoteRequest(data: any) {
   Logger.info(`📩 Received vote request for block: ${data.block.hash}`);
 
   const isValid = blockchain.isValid(data.block);
-  safePublish(Topics.VOTE, {
+  safePublish(Topics.BLOCKCHAIN_VOTE, {
     type: EventType.VOTE_RESPONSE,
     data: {
       blockHash: data.block.hash,

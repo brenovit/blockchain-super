@@ -31,7 +31,7 @@ function handleElection(data: any) {
   Logger.debug(`🗳️ Starting election...`);
   if (_isMaster) {
     Logger.debug(`👑 I am already the new master: ${MY_ID}`);
-    safePublish(Topics.ELECTION, {
+    safePublish(Topics.NETWORK_LEADER_ELECTION, {
       type: EventType.MASTER_ANNOUNCEMENT,
       data: MY_ID,
     });
@@ -50,7 +50,8 @@ function handleElectionVoteResponse(data: any) {
     //add vote for candidate
     voteCounts[data.candidateId] = (voteCounts[data.candidateId] || 0) + 1;
 
-    const totalPeers = getSubscribers(Topics.ELECTION).length + 1;
+    const totalPeers =
+      getSubscribers(Topics.NETWORK_LEADER_ELECTION).length + 1;
     const requiredVotes = Math.ceil(totalPeers / 2);
 
     const sortedCandidates = Object.entries(voteCounts) //convert to array
@@ -95,7 +96,7 @@ function trackElectionRound(data: any) {
     activeVote.votedFor = candidateId;
   }
 
-  safePublish(Topics.ELECTION, {
+  safePublish(Topics.NETWORK_LEADER_ELECTION, {
     type: EventType.VOTE_RESPONSE,
     data: {
       roundId,
@@ -120,7 +121,7 @@ function startElection() {
       const roundId = uuidv4();
       Logger.debug(`🎭 Starting leader election round: ${roundId}...`);
 
-      safePublish(Topics.ELECTION, {
+      safePublish(Topics.NETWORK_LEADER_ELECTION, {
         type: EventType.ELECTION,
         data: {
           candidateId: MY_ID,
@@ -135,7 +136,7 @@ function startElection() {
 
 function electNodeAsMaster(nodeId: string) {
   setNodeAsMaster(nodeId);
-  safePublish(Topics.ELECTION, {
+  safePublish(Topics.NETWORK_LEADER_ELECTION, {
     type: EventType.MASTER_ANNOUNCEMENT,
     data: nodeId,
   });

@@ -33,8 +33,8 @@ await node.start();
 
 // Subscribe to Topics
 await node.services.pubsub.subscribe(Topics.BLOCKCHAIN);
-await node.services.pubsub.subscribe(Topics.ELECTION);
-await node.services.pubsub.subscribe(Topics.VOTE);
+await node.services.pubsub.subscribe(Topics.BLOCKCHAIN_VOTE);
+await node.services.pubsub.subscribe(Topics.NETWORK_LEADER_ELECTION);
 
 export const MY_ID = node.peerId.toString();
 Logger.info(`🚀 libp2p Node started: ${MY_ID}`);

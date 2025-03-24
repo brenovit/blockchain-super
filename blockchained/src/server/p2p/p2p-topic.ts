@@ -1,7 +1,7 @@
 export const Topics = {
   BLOCKCHAIN: "blockchain",
-  ELECTION: "leader-election",
-  VOTE: "vote",
+  BLOCKCHAIN_VOTE: "blockchain_vote",
+  NETWORK_LEADER_ELECTION: "leader_election",
 } as const;
 
 export type TopicName = (typeof Topics)[keyof typeof Topics];
