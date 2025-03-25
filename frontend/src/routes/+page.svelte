@@ -4,6 +4,7 @@
 	import type { BlockchainStatus } from '$lib/blockchain-server/model/blockchain';
 	import { blockchainStore, appStore } from '$lib/store';
 	import { onDestroy } from 'svelte';
+	import Wallet from '$lib/components/wallet/Wallet.svelte';
 
 	const server = BlockchainServer.getInstance();
 
@@ -35,9 +36,16 @@
 
 <div class="container mt-3">
 	<div class="top-section sticky-top bg-white py-3">
+		<div class="d-flex justify-content-between">
+			<div class="align-self-start">
+				<h1 class="text-center">Blockchain Super</h1>
+			</div>
+			<div class="align-self-end">
+				<Wallet />
+			</div>
+		</div>
 		<div class="row">
 			<div class="col">
-				<h1 class="text-center">Blockchain Simulator</h1>
 				<h5>Client ID: <span class="badge text-bg-secondary">{clientId}</span></h5>
 				<h5>
 					Blockchain status: {#if blockChainStatus.valid}
@@ -52,20 +60,15 @@
 						</ul>
 					{/if}
 				</h5>
+			</div>
+		</div>
 
-				<!-- Form to Add Blocks -->
-				<div class="row mt-3">
-					<div class="col">
-						<div class="input-group">
-							<input
-								type="text"
-								bind:value={data}
-								class="form-control"
-								placeholder="Enter data..."
-							/>
-							<button class="btn btn-primary" on:click={createBlock}>Create Block</button>
-						</div>
-					</div>
+		<!-- Form to Add Blocks -->
+		<div class="row mt-3">
+			<div class="col">
+				<div class="input-group">
+					<input type="text" bind:value={data} class="form-control" placeholder="Enter data..." />
+					<button class="btn btn-primary" on:click={createBlock}>Create Block</button>
 				</div>
 			</div>
 		</div>
@@ -82,6 +85,7 @@
 		</div>
 	</div>
 </div>
+<slot name="teleport"></slot>
 
 <style>
 	.blockchain-container {
