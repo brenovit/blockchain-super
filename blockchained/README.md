@@ -18,7 +18,7 @@ Install all dependencies
 npm install
 ```
 
-Compile the project since
+Compile the project
 ```
 npm run build
 ```
@@ -34,13 +34,16 @@ npm start
 
 Or start the server with choosen id
 ```
-npm start --id 1
+npm start --id 2
 ```
 
-To compile the code and start the server
+To compile the code and start the server (default id 1)
 ```
 node run server
 ```
+
+To ensure the network is working is important to have more than 1 server running.
+
 ### Client
 
 To compile the code and start the WebSocket client
@@ -52,15 +55,29 @@ node run client
 
 1. Core Blockchain
 
-    - **Blocks**: Contain transactions, a timestamp, and a hash.
-    - **Mining**: A proof-of-work (PoW) mechanism.
-    - **Transactions**: Users can create and broadcast transactions.
+    - **Blocks**: The entity saved in the blockchain. It contains:
+      -  Index: the index of the block in the chain (order)
+      -  Data: the data the block holds
+      -  Timestamp: when the block was created
+      -  Nonce: the hash resolution
+      -  Previous hash: The hash of previous block
+      -  Hash: the hex output using SHA256 of the index + data + timestamp + nonce + previous hash
+    - **Mining**: A proof-of-work (PoW) mechanism. (no reward yet)
     - **Consensus**: Ensure all nodes agree on the chain.
+    - **Transactions**: Users can create and broadcast transactions.    
 
 2. P2P Network
    - Use **WebSockets** and **LibP2P** to communicate between nodes and FE.
-   - Nodes should be able to:
-     - Discover and connect to peers.
-     - Sync the blockchain with other nodes.
-     - Broadcast new transactions and blocks.
-     - Elect a master and slave node
+   - There are 2 types of Nodes:
+     - Server node:
+       - Uses only pubsub with gossip protocol to communicate
+       - Discover and connect to peers.
+       - Sync the blockchain with other nodes.
+       - Broadcast new blocks.
+       - Elect a master node.
+       - Mine and vote for the block.
+       - Connects to all topics availables
+     - Client node:
+       - Has pubsub + gossip and websocket
+       - Broadcast info from servers to/from websocket
+       - Connected to blockchain topic

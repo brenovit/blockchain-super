@@ -7,11 +7,11 @@ import { identify } from "@libp2p/identify";
 import { mdns } from "@libp2p/mdns";
 import { WebSocketServer, WebSocket } from "ws";
 import { Logger } from "../../utils/logger.js";
-import { NodeEvent, NodeMessage } from "../node-event.js";
-import crypto from "crypto";
+import { EventType, NodeEvent, NodeMessage } from "../node-event.js";
+import { safePublish } from "./p2p-server-node.js";
+import { Topics } from "./p2p-topic.js";
 
 const WS_PORT = 5000;
-const BLOCKCHAIN_TOPIC = "blockchain";
 
 //Create libp2p node
 const node = await createLibp2p({
@@ -32,7 +32,7 @@ await node.start();
 Logger.info(`🚀 libp2p Node started: ${node.peerId.toString()}`);
 
 // ✅ Step 2: Subscribe to libp2p blockchain events
-await node.services.pubsub.subscribe(BLOCKCHAIN_TOPIC);
+await node.services.pubsub.subscribe(Topics.BLOCKCHAIN);
 Logger.info(`📡 Subscribed to blockchain topic`);
 
 node.services.pubsub.addEventListener("message", handleEvent);
@@ -79,8 +79,8 @@ function handleWebSocketServerConnection(ws: WebSocket) {
     wsClients = wsClients.filter((client) => client !== ws);
   });
 
-  safePublish(BLOCKCHAIN_TOPIC, {
-    type: "REQUEST_SYNC_BLOCKCHAIN",
+  safePublish(Topics.BLOCKCHAIN, {
+    type: EventType.REQUEST_SYNC_BLOCKCHAIN,
     data: 1,
   });
 }
@@ -93,39 +93,9 @@ function handleWebSocketClientMessage(message: WebSocket.RawData) {
     case "CREATE_BLOCK":
     //case "UPDATE_BLOCK":
     case "MINE_BLOCK":
-      safePublish(BLOCKCHAIN_TOPIC, event);
+      safePublish(Topics.BLOCKCHAIN, event);
       break;
     default:
       Logger.warn(`Unknown or unnacpeted message type: ${event.type}`);
   }
-}
-
-async function safePublish(topic: string, message: NodeMessage) {
-  const peersSubscribed = node.services.pubsub.getSubscribers(topic);
-
-  if (peersSubscribed.length === 0) {
-    Logger.warn(`⚠️ No peers subscribed to [${topic}]. Skipping publish.`);
-    return;
-  }
-
-  try {
-    Logger.trace(
-      `📡 Publishing to topic [${topic}] : ${JSON.stringify(message, null, 2)}`
-    );
-    const event = generateEventWithId(message);
-
-    await node.services.pubsub.publish(
-      topic,
-      new TextEncoder().encode(JSON.stringify(event))
-    );
-  } catch (error) {
-    Logger.error(`❌ Error publishing to ${topic}: ${error}`);
-  }
-}
-function generateEventWithId(event: NodeMessage): NodeEvent {
-  return {
-    id: crypto.createHash("sha1").update(JSON.stringify(event)).digest("hex"),
-    data: event.data,
-    type: event.type,
-  };
 }
