@@ -2,11 +2,19 @@ import crypto from "crypto";
 import { StorageService } from "../storage/storage-service.js";
 import { Logger } from "../../utils/logger.js";
 import { Block, Blockchain } from "../model/blockchain.js";
+import { PublicKey } from "@solana/web3.js";
+import { encodeBase58, verifyMessage } from "ethers";
+import bs58 from "bs58";
 
 const FIXED_GENESIS_BLOCK = {
   index: 0,
   timestamp: "1997-23-01T15:40:00.000Z",
-  data: { clientId: "genesis", data: "Genesis Block" },
+  transaction: {
+    nodeId: "Genesis",
+    data: "Genesis Block",
+    signer: "Genesis",
+    signature: "Genesis",
+  },
   previousHash: "0",
   nonce: 0,
 };
@@ -15,8 +23,10 @@ export class BlockchainService {
   private _blockchain: Blockchain;
 
   private storage: StorageService;
+  private identifier: number;
 
   constructor(identifier: any) {
+    this.identifier = identifier;
     this.storage = new StorageService(identifier);
     this._blockchain = this.createOrLoadBlockchain();
   }
@@ -26,13 +36,15 @@ export class BlockchainService {
     if (data) {
       return data;
     } else {
-      return new Blockchain([this.createGenesisBlock()], 2);
+      const blockchain = new Blockchain([this.createGenesisBlock()], 2);
+      this.storage.saveData(blockchain);
+      return blockchain;
     }
   }
 
   private createGenesisBlock() {
     const block = new Block(
-      FIXED_GENESIS_BLOCK.data,
+      FIXED_GENESIS_BLOCK.transaction,
       FIXED_GENESIS_BLOCK.index,
       FIXED_GENESIS_BLOCK.timestamp,
       FIXED_GENESIS_BLOCK.previousHash
@@ -42,17 +54,82 @@ export class BlockchainService {
   }
 
   loadChainFromNetwork(blockchain: Blockchain) {
-    this._blockchain = blockchain;
+    this._blockchain = new Blockchain(blockchain.chain, blockchain.difficulty);
     this.saveChain();
   }
 
   async createBlock(data: any): Promise<Block> {
     Logger.info("Creating new block to be added in the chain");
+    Logger.debug(`Data: ${JSON.stringify(data)}`);
+    data.nodeId = this.identifier;
+    data.signature = this.encodeSignature(data);
     const newBlock = new Block(data);
     newBlock.index = this.chain.length;
     newBlock.previousHash = this.getLatestBlock().hash;
     const minedBlock = this.mine(newBlock);
     return minedBlock;
+  }
+
+  private encodeSignature({ signer, signature, data }: any) {
+    Logger.debug(`publicKey: ${signer}`);
+    let wallet = "unknown";
+    let valid = false;
+    let encodedSignature = undefined;
+
+    if (!signer && signer.startsWith("0x") && signer.length === 42) {
+      wallet = "ethereum";
+      valid = this.verifyEthSignature(JSON.stringify(data), signature, signer);
+      encodedSignature = encodeBase58(signature);
+    }
+    try {
+      const decoded = bs58.decode(signer);
+      Logger.debug(`
+        decoded: ${decoded} |
+        length: ${decoded.toString().length}`);
+
+      //if (decoded.toString().length === 32) {
+      new PublicKey(signer); // throws if invalid
+      wallet = "solana";
+      valid = this.verifySolanaSignature(
+        JSON.stringify(data),
+        signature,
+        signer
+      );
+      encodedSignature = bs58.encode(signature); // Uint8Array ➡ base58
+      //}
+    } catch {
+      // Not base58 or invalid
+    }
+    Logger.debug(`Wallet found: ${wallet}`);
+    if (!valid) {
+      Logger.debug(`invalid`);
+    }
+    return encodedSignature;
+  }
+
+  verifyEthSignature(
+    message: string,
+    signature: string,
+    expectedAddress: string
+  ): boolean {
+    try {
+      const recovered = verifyMessage(message, signature);
+      return recovered.toLowerCase() === expectedAddress.toLowerCase();
+    } catch {
+      return false;
+    }
+  }
+
+  verifySolanaSignature(
+    message: string,
+    signatureArray: number[],
+    publicKeyStr: string
+  ): boolean {
+    const pubKey = new PublicKey(publicKeyStr);
+    const messageBytes = new TextEncoder().encode(message);
+    const signature = Uint8Array.from(signatureArray);
+    //return pubKey.verify(messageBytes, signature);
+    return false;
   }
 
   addBlock(newBlock: Block): boolean {
@@ -124,13 +201,15 @@ export class BlockchainService {
   private generateHash({
     index,
     timestamp,
-    data,
+    transation,
     previousHash,
     nonce,
   }: Block): string {
     return crypto
       .createHash("sha256")
-      .update(index + timestamp + JSON.stringify(data) + previousHash + nonce)
+      .update(
+        index + timestamp + JSON.stringify(transation) + previousHash + nonce
+      )
       .digest("hex");
   }
 

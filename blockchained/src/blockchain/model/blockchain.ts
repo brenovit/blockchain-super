@@ -1,26 +1,28 @@
-interface BlockData {
-  clientId: string;
+interface BlockTransation {
   data: any;
+  signer: string;
+  signature: string;
+  nodeId: string;
 }
 
 export class Block {
   index: number;
   timestamp: string;
-  data: BlockData;
+  transation: BlockTransation;
   previousHash: string;
   hash: string = "";
   nonce: number;
   valid: boolean;
 
   constructor(
-    data: BlockData,
+    transation: BlockTransation,
     index = 0,
     timestamp = new Date().toISOString(),
     previousHash = ""
   ) {
     this.index = index;
     this.timestamp = timestamp;
-    this.data = data;
+    this.transation = transation;
     this.previousHash = previousHash;
     this.nonce = 0;
     this.valid = true;

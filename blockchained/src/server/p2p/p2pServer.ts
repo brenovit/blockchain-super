@@ -128,10 +128,7 @@ let votes: { [peerId: string]: boolean } = {};
 async function handleCreateBlock(blockData: any) {
   if (processingBlock) return;
   processingBlock = true;
-  const newBlock = await blockchain.createBlock({
-    data: blockData,
-    clientId: "2",
-  });
+  const newBlock = await blockchain.createBlock(blockData);
 
   if (newBlock.valid) {
     pendingBlock = newBlock;
