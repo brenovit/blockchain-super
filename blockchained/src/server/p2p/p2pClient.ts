@@ -8,8 +8,8 @@ import { mdns } from "@libp2p/mdns";
 import { WebSocketServer, WebSocket } from "ws";
 import { Logger } from "../../utils/logger.js";
 import { EventType, NodeEvent, NodeMessage } from "../node-event.js";
-import { safePublish } from "./p2p-server-node.js";
-import { Topics } from "./p2p-topic.js";
+import { TopicName, Topics } from "./p2p-topic.js";
+import crypto from "crypto";
 
 const WS_PORT = 5000;
 
@@ -99,3 +99,52 @@ function handleWebSocketClientMessage(message: WebSocket.RawData) {
       Logger.warn(`Unknown or unnacpeted message type: ${event.type}`);
   }
 }
+
+//============= START: Publish to node
+async function safePublish(
+  topic: TopicName,
+  message: NodeMessage,
+  maxRetries = 1,
+  delay = 1000
+) {
+  const event = generateEventWithId(message);
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    const peers = node.services.pubsub.getSubscribers(topic);
+
+    if (peers.length > 0) {
+      try {
+        Logger.trace(
+          `📡 Publishing to topic [${topic}] | ${event.type} : ${event.id} | Attemp: ${attempt}/${maxRetries}`
+        );
+        return await node.services.pubsub.publish(
+          topic,
+          new TextEncoder().encode(JSON.stringify(event))
+        );
+      } catch (error) {
+        Logger.error(
+          `❌ Error publishing on attemp ${attempt}/${maxRetries}: ${error}`
+        );
+      }
+    } else {
+      Logger.warn(
+        `⚠️ No peers subscribed to ${topic}. Attemp ${attempt}/${maxRetries}. Retrying in ${
+          delay / 1000
+        } seconds...`
+      );
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, delay));
+  }
+
+  Logger.warn(`⛔ Failed to publish to ${topic} after ${maxRetries} attempts.`);
+  return Promise.resolve();
+}
+
+function generateEventWithId(event: NodeMessage): NodeEvent {
+  return {
+    id: crypto.createHash("sha1").update(JSON.stringify(event)).digest("hex"),
+    data: event.data,
+    type: event.type,
+  };
+}
+//============= STOP: Publish to node
