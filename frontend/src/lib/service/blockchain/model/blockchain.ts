@@ -8,18 +8,23 @@ export interface Blockchain {
 	status: BlockchainStatus;
 }
 
-interface BlockData {
-	clientId: string;
+interface BlockTransation {
 	data: any;
+	signer: string;
+	signature: string;
+	nodeId: string;
 }
+
 export interface Block {
 	index: number;
 	timestamp: string;
-	data: BlockData;
+	transation: BlockTransation;
 	previousHash: string;
 	hash: string;
 	nonce: number;
 	valid: boolean;
+	signer: string;
+	signature: string;
 }
 
 export type BlockchainSendEvent = {

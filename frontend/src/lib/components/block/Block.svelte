@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { BlockchainServer } from '$lib/blockchain-server/blockchain-server';
-	import type { Block } from '$lib/blockchain-server/model/blockchain';
+	import { BlockchainServer } from '$lib/service/blockchain/blockchain-server';
+	import type { Block } from '$lib/service/blockchain/model/blockchain';
 
 	const server = BlockchainServer.getInstance();
 
@@ -63,27 +63,47 @@
 
 			<!-- Data -->
 			<div class="mb-3 row">
-				<!-- Data ClientId -->
-				<div class="mb-3 row">
-					<label class="col-sm-2 col-form-label bold" for="data-clientId">ClientId:</label>
-					<div class="col-sm-10">
-						<div class="input-group">
-							<span class="input-group-text">@</span>
-							<input
-								id="data-clientId"
-								class="form-control"
-								bind:value={block.data.clientId}
-								disabled
-							/>
+				<div class="card p-2 bg-secondary-subtle">
+					<!-- Data ClientId -->
+					<div class="mb-2 row">
+						<label class="col-sm-2 col-form-label bold" for="data-clientId">Node:</label>
+						<div class="col-sm-10">
+							<div class="input-group">
+								<span class="input-group-text">!</span>
+								<input
+									id="data-clientId"
+									class="form-control"
+									bind:value={block.transation.nodeId}
+									disabled
+								/>
+							</div>
 						</div>
 					</div>
-				</div>
-				<!-- Data Data -->
-				<div class="mb-3 row">
-					<label class="col-sm-2 col-form-label" for="data-data">Data:</label>
-					<div class="col-sm-10">
-						<textarea id="data-data" class="form-control" rows="5" bind:value={block.data.data}
-						></textarea>
+					<div class="mb-2 row">
+						<label class="col-sm-2 col-form-label bold" for="data-clientId">Signer:</label>
+						<div class="col-sm-10">
+							<div class="input-group">
+								<span class="input-group-text">@</span>
+								<input
+									id="data-clientId"
+									class="form-control"
+									bind:value={block.transation.signer}
+									disabled
+								/>
+							</div>
+						</div>
+					</div>
+					<!-- Data Data -->
+					<div class="mb-2 row">
+						<label class="col-sm-2 col-form-label" for="data-data">Data:</label>
+						<div class="col-sm-10">
+							<textarea
+								id="data-data"
+								class="form-control"
+								rows="5"
+								bind:value={block.transation.data}
+							></textarea>
+						</div>
 					</div>
 				</div>
 			</div>

@@ -1,10 +1,11 @@
 import { blockchainStore, appStore } from '$lib/store';
+import { signMessage } from '../wallets';
 import type { BlockchainReceiveEvent, BlockchainSendEvent } from './model/blockchain';
 
 export class BlockchainServer {
 	private static instance: BlockchainServer;
 	private socket: WebSocket | undefined;
-	private clientId: string | null = null;
+	//private clientId: string | null = null;
 	private receivedEventIds = new Set<string>(); // ✅ Track processed messages
 
 	private constructor() {
@@ -28,10 +29,10 @@ export class BlockchainServer {
 						blockchainStore.set(event.data);
 						break;
 					case 'CLIENT_ID':
-						appStore.set({
+						/*appStore.set({
 							clientId: event.data
 						});
-						this.clientId = event.data;
+						this.clientId = event.data;*/
 						break;
 				}
 			};
@@ -51,10 +52,18 @@ export class BlockchainServer {
 		return BlockchainServer.instance;
 	}
 
-	createBlock(data: any) {
+	async createBlock(data: any, signer: string) {
 		if (!data) return;
 		if (this.socket?.readyState === WebSocket.OPEN) {
-			this.send({ type: 'CREATE_BLOCK', data });
+			const signature = await signMessage(JSON.stringify(data));
+			this.send({
+				type: 'CREATE_BLOCK',
+				data: {
+					data,
+					signer,
+					signature: signature.values().toArray()
+				}
+			});
 		}
 	}
 

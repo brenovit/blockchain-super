@@ -1,8 +1,9 @@
 <script lang="ts">
-	import { connectWallet, getAvailableWallets } from '$lib/wallets';
-	import type { WalletAdapter } from '$lib/wallets/WalletAdapter';
+	import { connectWallet, getAvailableWallets, type WalletData } from '$lib/service/wallets';
+	import type { WalletAdapter } from '$lib/service/wallets/WalletAdapter';
 	import { onMount } from 'svelte';
 	import Modal from '../shared/Modal.svelte';
+	import { appStore } from '$lib/store';
 
 	let availableWallets: WalletAdapter[] = [];
 	let modalRef: Modal;
@@ -22,26 +23,39 @@
 		availableWallets = getAvailableWallets();
 		const dataSaved = localStorage.getItem('connectedWallet');
 		if (dataSaved) {
-			const { _publicKey, _logo, _name } = JSON.parse(dataSaved);
-			selectedWallet = { logo: _logo, name: _name };
-			publicKey = _publicKey;
-			connected = true;
+			const data = JSON.parse(dataSaved) as WalletData;
+			loadWallet(data);
 		}
 	});
+
+	async function loadWallet(walletData: any) {
+		const key = await connectWallet(walletData.name);
+		if (key) {
+			selectedWallet = { logo: walletData.logo, name: walletData.name };
+			publicKey = key;
+			appStore.set({
+				connectedWallet: walletData
+			});
+			connected = true;
+		}
+	}
 
 	async function connect(wallet: WalletAdapter) {
 		try {
 			selectedWallet = wallet;
 			publicKey = await connectWallet(wallet.name);
-			console.log('✅ Connected to:', publicKey);
-			localStorage.setItem(
-				'connectedWallet',
-				JSON.stringify({
-					_logo: wallet.logo,
-					_name: wallet.name,
-					_publicKey: publicKey
-				})
-			);
+			console.log('✅ Connected at:', wallet.name);
+			const walletData = {
+				logo: wallet.logo,
+				name: wallet.name
+			};
+			appStore.set({
+				connectedWallet: {
+					...walletData,
+					publicKey
+				}
+			});
+			localStorage.setItem('connectedWallet', JSON.stringify(walletData));
 			connected = true;
 			modalRef.close();
 		} catch (err) {
