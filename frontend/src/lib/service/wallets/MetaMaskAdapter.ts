@@ -1,5 +1,6 @@
 import type { WalletAdapter } from './WalletAdapter';
 import logo from '$lib/assets/icons/MetaMask-icon.svg';
+import { Buffer } from 'buffer';
 
 export class MetaMaskAdapter implements WalletAdapter {
 	name = 'MetaMask';

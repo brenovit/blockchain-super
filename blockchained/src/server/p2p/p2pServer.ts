@@ -90,6 +90,7 @@ function handleEvent(message: any) {
 function handleSyncNodes(sender: any) {
   if (isMaster()) {
     Logger.info(`🚀 Master node requested to send blockchain from ${sender}`);
+
     safePublish(Topics.BLOCKCHAIN, {
       type: EventType.BLOCKCHAIN_UPDATE,
       data: blockchain.data,
@@ -99,7 +100,7 @@ function handleSyncNodes(sender: any) {
 
 function broadcastBlockchain() {
   if (isMaster()) {
-    Logger.trace("📡 Broadcasting blockchain...");
+    Logger.trace(`📡 Broadcasting blockchain...`);
     safePublish(Topics.BLOCKCHAIN, {
       type: EventType.BLOCKCHAIN,
       data: blockchain.data,
@@ -109,7 +110,7 @@ function broadcastBlockchain() {
 
 function handleBlockchainUpdate(newChain: Blockchain) {
   Logger.info(
-    `🔄 Received blockchain update with ${newChain.chain.length} blocks`
+    `🔄 Received blockchain update with ${newChain?.chain?.length} blocks`
   );
 
   const isValidChain = blockchain.checkChainValid(newChain);
@@ -215,7 +216,6 @@ function handleVoteRequest(data: any) {
 
 //============= START: Node maintanance
 setTimeout(() => {
-  Logger.trace("request blockchain");
   safePublish(Topics.BLOCKCHAIN, {
     type: EventType.REQUEST_SYNC_BLOCKCHAIN_SERVER,
     data: new Date().toISOString(),

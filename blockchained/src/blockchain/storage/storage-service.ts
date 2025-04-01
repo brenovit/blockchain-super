@@ -19,7 +19,7 @@ export class StorageService {
     }
 
     this.filePath = path.join(dataDir, this.fileName);
-    Logger.trace("Saving blockchain file to: " + this.filePath);
+    Logger.trace("Blockchain will be save on: " + this.filePath);
   }
 
   saveData(data: Blockchain) {

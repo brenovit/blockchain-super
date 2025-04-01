@@ -30,27 +30,19 @@ export class Block {
 }
 
 export class Blockchain {
-  private _chain: Block[];
-  private _difficulty: number;
+  chain: Block[];
+  difficulty: number;
 
   constructor(chain: Block[], difficulty = 2) {
-    this._chain = chain;
-    this._difficulty = difficulty;
+    this.chain = chain;
+    this.difficulty = difficulty;
   }
 
   add(block: Block) {
-    this._chain.push(block);
+    this.chain.push(block);
   }
 
   replace(chain: Block[]) {
-    this._chain = chain;
-  }
-
-  get chain() {
-    return this._chain;
-  }
-
-  get difficulty() {
-    return this._difficulty;
+    this.chain = chain;
   }
 }

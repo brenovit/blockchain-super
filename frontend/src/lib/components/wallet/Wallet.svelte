@@ -24,6 +24,7 @@
 		const dataSaved = localStorage.getItem('connectedWallet');
 		if (dataSaved) {
 			const data = JSON.parse(dataSaved) as WalletData;
+			console.log(`Found wallet on local storage ${data.name}`);
 			loadWallet(data);
 		}
 	});
@@ -31,10 +32,15 @@
 	async function loadWallet(walletData: any) {
 		const key = await connectWallet(walletData.name);
 		if (key) {
+			console.log(`Connected to wallet ${walletData.name}`);
+
 			selectedWallet = { logo: walletData.logo, name: walletData.name };
 			publicKey = key;
 			appStore.set({
-				connectedWallet: walletData
+				connectedWallet: {
+					...selectedWallet,
+					publicKey: key
+				}
 			});
 			connected = true;
 		}

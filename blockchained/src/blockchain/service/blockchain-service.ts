@@ -59,7 +59,7 @@ export class BlockchainService {
   }
 
   async createBlock(data: any): Promise<Block> {
-    Logger.info("Creating new block to be added in the chain");
+    Logger.debug("Creating new block to be added in the chain");
     Logger.debug(`Data: ${JSON.stringify(data)}`);
     data.nodeId = this.identifier;
     data.signature = this.encodeSignature(data);
@@ -258,22 +258,24 @@ export class BlockchainService {
 
   checkChainValid(blockchain: Blockchain) {
     const errors: string[] = [];
-    for (let i = 0; i < blockchain.chain.length; i++) {
-      const currentBlock = blockchain.chain[i];
-      const previousBlock = blockchain.chain[i - 1];
+    if (blockchain && blockchain.chain) {
+      for (let i = 0; i < blockchain.chain.length; i++) {
+        const currentBlock = blockchain.chain[i];
+        const previousBlock = blockchain.chain[i - 1];
 
-      if (!currentBlock.valid) {
-        errors.push(
-          `The block #${
-            currentBlock.index
-          } is invalid. Calculated hash: ${this.generateHash(currentBlock)}`
-        );
-      }
+        if (!currentBlock.valid) {
+          errors.push(
+            `The block #${
+              currentBlock.index
+            } is invalid. Calculated hash: ${this.generateHash(currentBlock)}`
+          );
+        }
 
-      if (previousBlock && currentBlock.previousHash != previousBlock.hash) {
-        errors.push(
-          `The block #${currentBlock.index} is pointing to an inexistent block. The hash does not match with previous block #${previousBlock.index}`
-        );
+        if (previousBlock && currentBlock.previousHash != previousBlock.hash) {
+          errors.push(
+            `The block #${currentBlock.index} is pointing to an inexistent block. The hash does not match with previous block #${previousBlock.index}`
+          );
+        }
       }
     }
     return {
