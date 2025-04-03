@@ -1,9 +1,23 @@
 <script lang="ts">
-	import { connectWallet, getAvailableWallets, type WalletData } from '$lib/service/wallets';
+	import {
+		connectWallet,
+		disconnectSelectedWallet,
+		getAvailableWallets,
+		type WalletData
+	} from '$lib/service/wallets';
 	import type { WalletAdapter } from '$lib/service/wallets/WalletAdapter';
 	import { onMount } from 'svelte';
 	import Modal from '../shared/Modal.svelte';
 	import { appStore } from '$lib/store';
+	import Onboard from '@web3-onboard/core';
+	import type { OnboardAPI } from '@web3-onboard/core';
+	import injectedWalletsModule from '@web3-onboard/injected-wallets';
+	const injected = injectedWalletsModule();
+
+	const wallets = [injected];
+	let onboard: OnboardAPI | null = null;
+
+	//const wallets$ = onboard?.state.select('wallets');
 
 	let availableWallets: WalletAdapter[] = [];
 	let modalRef: Modal;
@@ -15,8 +29,38 @@
 	let publicKey: string | null = null;
 	let connected = false;
 
-	function openModal() {
+	async function connectE() {
+		try {
+			const wallets = await onboard?.connectWallet();
+
+			if (wallets && wallets[0]) {
+				const wallet = wallets[0];
+				console.log(wallet);
+
+				publicKey = wallet.accounts[0].address;
+				selectedWallet = {
+					name: wallet.label,
+					logo: wallet.icon
+				};
+
+				connected = true;
+			}
+		} catch (err) {
+			console.error('❌ Wallet connection failed:', err);
+			connected = false;
+		}
+	}
+
+	function connectS() {
 		modalRef.open();
+	}
+
+	function disconnect() {
+		publicKey = null;
+		connected = false;
+		selectedWallet = null;
+		localStorage.removeItem('connectedWallet');
+		disconnectSelectedWallet();
 	}
 
 	onMount(() => {
@@ -26,6 +70,26 @@
 			const data = JSON.parse(dataSaved) as WalletData;
 			console.log(`Found wallet on local storage ${data.name}`);
 			loadWallet(data);
+		}
+		if (!onboard) {
+			onboard = Onboard({
+				wallets: wallets,
+				chains: [
+					{
+						id: '0x2105',
+						token: 'ETH',
+						label: 'Base',
+						rpcUrl: 'https://mainnet.base.org'
+					}
+				],
+				connect: {
+					showSidebar: false,
+					autoConnectAllPreviousWallet: false,
+					autoConnectLastWallet: false,
+					removeIDontHaveAWalletInfoLink: true
+					//removeWhereIsMyWalletWarning: true
+				}
+			});
 		}
 	});
 
@@ -46,7 +110,7 @@
 		}
 	}
 
-	async function connect(wallet: WalletAdapter) {
+	async function openWallet(wallet: WalletAdapter) {
 		try {
 			selectedWallet = wallet;
 			publicKey = await connectWallet(wallet.name);
@@ -65,15 +129,8 @@
 			connected = true;
 			modalRef.close();
 		} catch (err) {
-			console.error('❌ Wallet connection failed:', err);
+			console.error('❌ Wallet oppening failed:', err);
 		}
-	}
-
-	function disconnect() {
-		publicKey = null;
-		connected = false;
-		selectedWallet = null;
-		localStorage.removeItem('connectedWallet');
 	}
 </script>
 
@@ -92,7 +149,9 @@
 		<button class="btn btn-sm btn-outline-danger" on:click={disconnect}>Disconnect</button>
 	</div>
 {:else}
-	<button type="button" class="btn btn-outline-secondary" on:click={openModal}>Connect</button>
+	<button type="button" class="btn btn-outline-secondary" on:click={connectE}>Connect Ether</button>
+	<button type="button" class="btn btn-outline-secondary" on:click={connectS}>Connect Solana</button
+	>
 {/if}
 
 <!-- Modal Component -->
@@ -101,7 +160,7 @@
 		{#each availableWallets as wallet}
 			<button
 				class="btn btn-outline-secondary d-flex align-items-center justify-content-start w-100 mb-2"
-				on:click={() => connect(wallet)}
+				on:click={() => openWallet(wallet)}
 			>
 				<img src={wallet.logo} alt={wallet.name} width="24" height="24" class="me-2" />
 				{wallet.name}

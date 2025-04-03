@@ -7,12 +7,20 @@ export class MetaMaskAdapter implements WalletAdapter {
 	logo = logo;
 
 	isAvailable(): boolean {
-		return typeof window !== 'undefined' && typeof window.ethereum !== 'undefined';
+		return (
+			typeof window !== 'undefined' &&
+			typeof window.ethereum !== 'undefined' &&
+			!!window.ethereum.providerMap.keys().find((x) => x === 'MetaMask')
+		);
 	}
 
 	async connect(): Promise<string> {
 		const [address] = await window.ethereum?.request({ method: 'eth_requestAccounts' });
 		return address;
+	}
+
+	disconnect(): Promise<boolean> {
+		throw new Error('Method not implemented.');
 	}
 
 	async signMessage(message: string): Promise<Uint8Array> {

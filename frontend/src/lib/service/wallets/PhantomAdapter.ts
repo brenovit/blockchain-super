@@ -5,7 +5,12 @@ export class PhantomAdapter implements WalletAdapter {
 	name = 'Phantom';
 	logo = logo;
 	isAvailable(): boolean {
-		return typeof window !== 'undefined' && typeof window.solana !== 'undefined';
+		console.log(window);
+		return (
+			typeof window !== 'undefined' &&
+			typeof window.solana !== 'undefined' &&
+			!!window.solana.isPhantom
+		);
 	}
 
 	async connect(): Promise<string> {
@@ -14,6 +19,9 @@ export class PhantomAdapter implements WalletAdapter {
 			throw new Error('Failed to connect to Phantom wallet');
 		}
 		return resp.publicKey.toString();
+	}
+	disconnect(): Promise<boolean> {
+		throw new Error('Method not implemented.');
 	}
 
 	async signMessage(message: string): Promise<Uint8Array> {

@@ -98,4 +98,10 @@
 		overflow-y: auto; /* Enable scrolling only in blockchain section */
 		padding: 20px;
 	}
+	.sticky-top {
+		position: -webkit-sticky;
+		position: sticky;
+		top: 0;
+		z-index: 2;
+	}
 </style>
