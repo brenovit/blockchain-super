@@ -35,6 +35,7 @@ interface Solflare {
 	connect: () => Promise<{ publicKey: { toString(): string } }>;
 	disconnect: () => Promise<{ publicKey: { toString(): string } }>;
 	signMessage: (t, e) => Promise<{ publicKey: { toString(): string } }>;
+	publicKey: string;
 }
 
 interface Window {

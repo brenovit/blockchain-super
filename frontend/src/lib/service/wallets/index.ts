@@ -20,6 +20,7 @@ export interface WalletData {
 }
 
 export function getAvailableWallets(): WalletAdapter[] {
+	console.log(window);
 	return adapters.filter((a) => a.isAvailable());
 }
 

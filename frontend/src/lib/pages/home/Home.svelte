@@ -4,8 +4,10 @@
 	import type { BlockchainStatus } from '$lib/service/blockchain/model/blockchain';
 	import { blockchainStore, appStore } from '$lib/store';
 	import { onDestroy } from 'svelte';
-	import Wallet from '$lib/components/wallet/Wallet.svelte';
+	import Wallet from '$lib/components/wallet/SolanaWallet.svelte';
 	import type { WalletData } from '$lib/service/wallets';
+	import EthereumWallet from '$lib/components/wallet/EthereumWallet.svelte';
+	import SolanaWallet from '$lib/components/wallet/SolanaWallet.svelte';
 
 	const server = BlockchainServer.getInstance();
 
@@ -48,7 +50,8 @@
 				<h1 class="text-center">Blockchain Super</h1>
 			</div>
 			<div class="align-self-end">
-				<Wallet />
+				<EthereumWallet />
+				<SolanaWallet />
 			</div>
 		</div>
 		<div class="row">

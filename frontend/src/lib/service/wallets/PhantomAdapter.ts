@@ -5,7 +5,6 @@ export class PhantomAdapter implements WalletAdapter {
 	name = 'Phantom';
 	logo = logo;
 	isAvailable(): boolean {
-		console.log(window);
 		return (
 			typeof window !== 'undefined' &&
 			typeof window.solana !== 'undefined' &&

@@ -15,7 +15,9 @@ export class SolflareAdapter implements WalletAdapter {
 
 	async connect(): Promise<string> {
 		const connected = await window.solflare?.connect();
+		console.log('connected: ' + connected);
 		if (connected) {
+			console.log('publicKey: ' + window.solflare?.publicKey);
 		}
 		return '';
 	}
