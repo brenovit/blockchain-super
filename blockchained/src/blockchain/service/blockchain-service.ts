@@ -79,7 +79,7 @@ export class BlockchainService {
     let network = "unknown";
     let valid = false;
 
-    if (!signer && signer.startsWith("0x") && signer.length === 42) {
+    if (signer && signer.startsWith("0x") && signer.length === 42) {
       network = "ethereum";
       valid = this.verifyEthSignature(JSON.stringify(data), signature, signer);
     } else {
