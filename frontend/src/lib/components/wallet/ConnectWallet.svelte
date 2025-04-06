@@ -1,31 +1,20 @@
 <script lang="ts">
 	import { type WalletData } from '$lib/service/wallet';
 	import { walletStore } from '$lib/store/walletStore';
-	import {
-		connectToWallet,
-		disconnectWallet
-	} from '$lib/service/wallet/adapter/ethereumWalletAdapter';
+
+	export let chain: string;
+	export let connect;
+	export let disconnect;
+	//$: $walletState, (connected = $walletState.connected);
 
 	let connectedWallet: WalletData | null = null;
 
 	walletStore.subscribe((value) => {
 		connectedWallet = value;
 	});
-
-	async function connect() {
-		try {
-			connectToWallet();
-		} catch (err) {
-			console.error('❌ Wallet connection failed:', err);
-		}
-	}
-
-	function disconnect() {
-		disconnectWallet();
-	}
 </script>
 
-{#if connectedWallet?.connected && connectedWallet?.chain === 'ethereum'}
+{#if connectedWallet?.connected && connectedWallet?.chain === chain}
 	<div class="d-flex align-items-center gap-2">
 		<img
 			src={connectedWallet?.logo}
@@ -37,8 +26,10 @@
 		<span class="badge bg-success text-wrap text-break">
 			{connectedWallet?.publicKey?.slice(0, 6)}...{connectedWallet?.publicKey?.slice(-4)}
 		</span>
-		<button class="btn btn-sm btn-outline-danger" on:click={disconnect}>Disconnect</button>
+		<button class="btn btn-sm btn-outline-danger" on:click={() => disconnect()}>Disconnect</button>
 	</div>
 {:else if !connectedWallet?.connected}
-	<button type="button" class="btn btn-outline-secondary" on:click={connect}>Connect Ether</button>
+	<button type="button" class="btn btn-outline-secondary" on:click={() => connect()}
+		>Connect Solana</button
+	>
 {/if}

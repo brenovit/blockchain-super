@@ -1,5 +1,5 @@
-import { blockchainStore, appStore } from '$lib/store';
-import { signMessage } from '../wallets';
+import { blockchainStore } from '$lib/store/blockchainStore';
+import { signMessage } from '../wallet';
 import type { BlockchainReceiveEvent, BlockchainSendEvent } from './model/blockchain';
 
 export class BlockchainServer {

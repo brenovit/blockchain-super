@@ -1,41 +1,46 @@
+import { walletStore } from '$lib/store/walletStore';
 import { getWallets } from '@wallet-standard/app';
-import type { Wallet } from '@wallet-standard/base';
 import bs58 from 'bs58';
-import { writable } from 'svelte/store';
-
-export const walletState = writable<{
-	connected: boolean;
-	publicKey: string | null;
-	name: string | null;
-}>({ connected: false, publicKey: null, name: null });
+import type { WalletData } from '..';
 
 let selectedWallet: any = null;
 
-export function listWallets() {
+const chainType = 'solana';
+
+export function listWallets(): WalletData[] {
 	const wallets = getWallets();
 	return wallets.get().map((w) => ({
 		name: w.name,
-		icon: w.icon,
-		adapter: w
+		logo: w.icon,
+		connected: false,
+		chain: chainType,
+		publicKey: null
 	}));
 }
 
 export async function connectToWallet(walletName: string) {
-	const wallet = listWallets().find((w) => w.name === walletName);
+	const wallet = getWallets()
+		.get()
+		.find((w) => w.name === walletName);
 	if (!wallet) throw new Error('Wallet not found');
 
-	selectedWallet = wallet.adapter;
+	selectedWallet = wallet;
 	if (!('standard:connect' in selectedWallet.features))
 		throw new Error('connect feature not found on selectedWallet');
 
 	const feature = selectedWallet?.features['standard:connect'] as {
 		connect: () => Promise<any>;
 	};
-	const response = await feature.connect();
-	console.log(response.accounts[0]);
-	const account = response.accounts[0];
+	const wallets = await feature.connect();
+	const account = wallets.accounts[0];
 	const publicKey = account.address;
-	walletState.set({ connected: true, publicKey: publicKey, name: walletName });
+	walletStore.set({
+		connected: true,
+		publicKey: publicKey,
+		logo: wallet.icon,
+		name: walletName,
+		chain: chainType
+	});
 }
 
 export async function signMessage(message: string): Promise<string> {
@@ -57,5 +62,5 @@ export async function disconnectWallet() {
 	};
 	await feature.disconnect();
 	selectedWallet = null;
-	walletState.set({ connected: false, publicKey: null, name: null });
+	walletStore.set({ connected: false, publicKey: null, name: null, chain: null, logo: null });
 }

@@ -2,10 +2,11 @@
 	import Block from '$lib/components/block/Block.svelte';
 	import { BlockchainServer } from '$lib/service/blockchain/blockchain-server';
 	import type { BlockchainStatus } from '$lib/service/blockchain/model/blockchain';
-	import { blockchainStore, appStore } from '$lib/store';
+	import { blockchainStore } from '$lib/store/blockchainStore';
+	import { walletStore } from '$lib/store/walletStore';
 	import { onDestroy } from 'svelte';
 	import Wallet from '$lib/components/wallet/SolanaWallet.svelte';
-	import type { WalletData } from '$lib/service/wallets';
+	import type { WalletData } from '$lib/service/wallet';
 	import EthereumWallet from '$lib/components/wallet/EthereumWallet.svelte';
 	import SolanaWallet from '$lib/components/wallet/SolanaWallet.svelte';
 
@@ -16,9 +17,8 @@
 	let data = '';
 	let connectedWallet: WalletData;
 
-	appStore.subscribe((value) => {
-		//clientId = value.clientId;
-		connectedWallet = value.connectedWallet;
+	walletStore.subscribe((value) => {
+		connectedWallet = value;
 	});
 	blockchainStore.subscribe((value) => {
 		blockchain = value.chain.sort((a, b) => b.index - a.index);
