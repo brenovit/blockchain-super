@@ -3,7 +3,12 @@ import { getWallets } from '@wallet-standard/app';
 import bs58 from 'bs58';
 import type { WalletData } from '..';
 
-let selectedWallet: any = null;
+let walletState: { features: any; account: any } | null = null;
+let connectedWallet: WalletData;
+
+walletStore.subscribe((value) => {
+	connectedWallet = value;
+});
 
 const chainType = 'solana';
 
@@ -25,16 +30,16 @@ export async function connectToWallet(walletName: string) {
 		.find((w) => w.name === walletName);
 	if (!wallet) throw new Error('Wallet not found');
 
-	selectedWallet = wallet;
-	if (!('standard:connect' in selectedWallet.features))
-		throw new Error('connect feature not found on selectedWallet');
+	const feature = wallet.features['standard:connect'] as any;
 
-	const feature = selectedWallet?.features['standard:connect'] as {
-		connect: () => Promise<any>;
-	};
-	const wallets = await feature.connect();
-	const account = wallets.accounts[0];
+	if (!feature || typeof feature.connect !== 'function') {
+		throw new Error('connect feature not supported by wallet');
+	}
+
+	const response = await feature.connect();
+	const account = response.accounts[0];
 	const publicKey = account.address;
+	walletState = { features: wallet.features, account: account };
 	walletStore.set({
 		connected: true,
 		publicKey: publicKey,
@@ -46,24 +51,33 @@ export async function connectToWallet(walletName: string) {
 }
 
 export async function signMessage(message: string): Promise<string> {
-	if (!selectedWallet) throw new Error('No wallet connected');
-	if (!('standard:signMessage' in selectedWallet.features))
-		throw new Error('signMessage feature not found on selectedWallet');
+	if (!walletState) throw new Error('No wallet connected');
+	console.log('Wallet features:', Object.keys(walletState.features));
+
+	const feature = walletState.features['solana:signMessage'];
+
+	if (!feature || typeof feature.signMessage !== 'function') {
+		throw new Error('signMessage feature not supported by wallet');
+	}
 
 	const encoded = new TextEncoder().encode(message);
-	const signature = await selectedWallet.signMessage({ message: encoded });
-	return bs58.encode(signature.signature); // return base58 encoded signature
+	const [response] = await feature.signMessage({
+		account: walletState.account,
+		message: encoded
+	});
+	return bs58.encode(response.signature); // return base58 encoded signature
 }
 
 export async function disconnectWallet() {
-	if (!selectedWallet) throw new Error('No wallet connected');
-	if (!('standard:disconnect' in selectedWallet.features))
-		throw new Error('disconnect feature not found on selectedWallet');
-	const feature = selectedWallet?.features['standard:disconnect'] as {
-		disconnect: () => Promise<void>;
-	};
+	if (!walletState) throw new Error('No wallet connected');
+	const feature = walletState.features['standard:disconnect'];
+
+	if (!feature || typeof feature.disconnect !== 'function') {
+		throw new Error('disconnect feature not supported by wallet');
+	}
+
 	await feature.disconnect();
-	selectedWallet = null;
+	walletState = null;
 	walletStore.set({
 		connected: false,
 		publicKey: null,

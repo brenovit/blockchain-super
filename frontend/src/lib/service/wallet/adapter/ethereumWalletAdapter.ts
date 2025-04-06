@@ -3,7 +3,7 @@ import Onboard from '@web3-onboard/core';
 import injectedWalletsModule from '@web3-onboard/injected-wallets';
 import type { WalletData } from '..';
 
-let connectedWallet: WalletData | null;
+let connectedWallet: WalletData;
 
 walletStore.subscribe((value) => {
 	connectedWallet = value;
@@ -44,7 +44,6 @@ export async function connectToWallet() {
 	if (wallets.length > 0) {
 		const wallet = wallets[0];
 		const account = wallet.accounts[0];
-		const publicKey = account.address;
 		walletStore.set({
 			connected: true,
 			publicKey: account.address,
