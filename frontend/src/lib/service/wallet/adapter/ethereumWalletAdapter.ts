@@ -11,10 +11,8 @@ walletStore.subscribe((value) => {
 
 const injected = injectedWalletsModule();
 
-const wallets = [injected];
-
 const onboard = Onboard({
-	wallets: wallets,
+	wallets: [injected],
 	chains: [
 		{
 			id: '0x2105',
@@ -28,8 +26,6 @@ const onboard = Onboard({
 		autoConnectAllPreviousWallet: false,
 		autoConnectLastWallet: false,
 		removeIDontHaveAWalletInfoLink: true
-
-		//removeWhereIsMyWalletWarning: true
 	},
 	accountCenter: {
 		hideTransactionProtectionBtn: true,
@@ -44,6 +40,7 @@ const onboard = Onboard({
 
 export async function connectToWallet() {
 	const wallets = await onboard.connectWallet();
+
 	if (wallets.length > 0) {
 		const wallet = wallets[0];
 		const account = wallet.accounts[0];
@@ -53,18 +50,23 @@ export async function connectToWallet() {
 			publicKey: account.address,
 			logo: wallets[0].icon,
 			name: wallet.label,
-			chain: 'ethereum'
+			chain: 'ethereum',
+			signMessage: signMessage
 		});
-	} else {
-		throw new Error('No wallet connected');
 	}
 }
 
 export async function signMessage(message: string): Promise<string> {
+	const accounts = await getProvider().request({
+		method: 'eth_accounts'
+	});
+	const address = accounts[0];
+	const hexMessage = '0x' + Buffer.from(message, 'utf8').toString('hex');
+
 	const signature = getProvider()
 		.request({
-			method: 'eth_sign',
-			params: [connectedWallet?.publicKey, message]
+			method: 'personal_sign',
+			params: [hexMessage, address]
 		})
 		.then((result: any) => {
 			return result;
@@ -78,8 +80,19 @@ export async function signMessage(message: string): Promise<string> {
 }
 
 export async function disconnectWallet() {
-	await getProvider().disconnect;
-	walletStore.set({ connected: false, publicKey: null, name: null, chain: null, logo: null });
+	const [primaryWallet] = onboard.state.get().wallets;
+	if (!primaryWallet) {
+		throw new Error('No wallet connected');
+	}
+	await onboard.disconnectWallet({ label: primaryWallet.label });
+	walletStore.set({
+		connected: false,
+		publicKey: null,
+		name: null,
+		chain: null,
+		logo: null,
+		signMessage: signMessage
+	});
 }
 
 function getProvider() {

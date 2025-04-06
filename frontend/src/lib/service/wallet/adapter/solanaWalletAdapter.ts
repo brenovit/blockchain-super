@@ -14,7 +14,8 @@ export function listWallets(): WalletData[] {
 		logo: w.icon,
 		connected: false,
 		chain: chainType,
-		publicKey: null
+		publicKey: null,
+		signMessage: signMessage
 	}));
 }
 
@@ -39,7 +40,8 @@ export async function connectToWallet(walletName: string) {
 		publicKey: publicKey,
 		logo: wallet.icon,
 		name: walletName,
-		chain: chainType
+		chain: chainType,
+		signMessage: signMessage
 	});
 }
 
@@ -62,5 +64,12 @@ export async function disconnectWallet() {
 	};
 	await feature.disconnect();
 	selectedWallet = null;
-	walletStore.set({ connected: false, publicKey: null, name: null, chain: null, logo: null });
+	walletStore.set({
+		connected: false,
+		publicKey: null,
+		name: null,
+		chain: null,
+		logo: null,
+		signMessage: signMessage
+	});
 }

@@ -1,5 +1,4 @@
 import { blockchainStore } from '$lib/store/blockchainStore';
-import { signMessage } from '../wallet';
 import type { BlockchainReceiveEvent, BlockchainSendEvent } from './model/blockchain';
 
 export class BlockchainServer {
@@ -52,16 +51,15 @@ export class BlockchainServer {
 		return BlockchainServer.instance;
 	}
 
-	async createBlock(data: any, signer: string) {
+	async createBlock(data: any, signer: string, signature: string) {
 		if (!data) return;
 		if (this.socket?.readyState === WebSocket.OPEN) {
-			const signature = await signMessage(JSON.stringify(data));
 			this.send({
 				type: 'CREATE_BLOCK',
 				data: {
 					data,
 					signer,
-					signature: signature.values().toArray()
+					signature
 				}
 			});
 		}

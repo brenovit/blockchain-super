@@ -7,5 +7,8 @@ export const walletStore = writable<WalletData>({
 	publicKey: null,
 	name: null,
 	logo: null,
-	chain: null
+	chain: null,
+	sign: () => {
+		throw new Error('Wallet not connected');
+	}
 });

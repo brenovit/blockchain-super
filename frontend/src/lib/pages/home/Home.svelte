@@ -25,7 +25,9 @@
 		blockChainStatus = value.status;
 	});
 
-	function createBlock() {
+	$: creationDisabled = !(connectedWallet && connectedWallet.connected);
+
+	async function createBlock() {
 		if (!data) return;
 
 		if (!connectedWallet.publicKey) {
@@ -33,7 +35,10 @@
 			return;
 		}
 
-		server.createBlock(data, connectedWallet.publicKey);
+		const signature = await connectedWallet.signMessage(data);
+		console.log('Signature:', signature);
+
+		server.createBlock(data, connectedWallet.publicKey, signature);
 
 		data = '';
 	}
@@ -76,8 +81,16 @@
 		<div class="row mt-3">
 			<div class="col">
 				<div class="input-group">
-					<input type="text" bind:value={data} class="form-control" placeholder="Enter data..." />
-					<button class="btn btn-primary" on:click={createBlock}>Create Block</button>
+					<input
+						type="text"
+						bind:value={data}
+						class="form-control"
+						placeholder="Enter data..."
+						disabled={creationDisabled}
+					/>
+					<button class="btn btn-primary" on:click={createBlock} disabled={creationDisabled}
+						>Create Block</button
+					>
 				</div>
 			</div>
 		</div>
