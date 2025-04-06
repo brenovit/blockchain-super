@@ -73,7 +73,7 @@
 								<input
 									id="data-clientId"
 									class="form-control"
-									bind:value={block.transation.nodeId}
+									bind:value={block.transaction.nodeId}
 									disabled
 								/>
 							</div>
@@ -87,7 +87,35 @@
 								<input
 									id="data-clientId"
 									class="form-control"
-									bind:value={block.transation.signer}
+									bind:value={block.transaction.signer}
+									disabled
+								/>
+							</div>
+						</div>
+					</div>
+					<div class="mb-2 row">
+						<label class="col-sm-2 col-form-label bold" for="data-clientId">Signature:</label>
+						<div class="col-sm-10">
+							<div class="input-group">
+								<span class="input-group-text">@</span>
+								<input
+									id="data-clientId"
+									class="form-control"
+									bind:value={block.transaction.signature}
+									disabled
+								/>
+							</div>
+						</div>
+					</div>
+					<div class="mb-2 row">
+						<label class="col-sm-2 col-form-label bold" for="data-clientId">Network:</label>
+						<div class="col-sm-10">
+							<div class="input-group">
+								<span class="input-group-text">@</span>
+								<input
+									id="data-clientId"
+									class="form-control"
+									bind:value={block.transaction.network}
 									disabled
 								/>
 							</div>
@@ -101,7 +129,7 @@
 								id="data-data"
 								class="form-control"
 								rows="5"
-								bind:value={block.transation.data}
+								bind:value={block.transaction.data}
 							></textarea>
 						</div>
 					</div>

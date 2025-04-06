@@ -52,7 +52,6 @@ export async function connectToWallet(walletName: string) {
 
 export async function signMessage(message: string): Promise<string> {
 	if (!walletState) throw new Error('No wallet connected');
-	console.log('Wallet features:', Object.keys(walletState.features));
 
 	const feature = walletState.features['solana:signMessage'];
 
