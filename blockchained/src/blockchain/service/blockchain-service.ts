@@ -3,10 +3,10 @@ import { StorageService } from "../storage/storage-service.js";
 import { Logger } from "../../utils/logger.js";
 import { Block, Blockchain } from "../model/blockchain.js";
 import { PublicKey } from "@solana/web3.js";
-import { encodeBase58, verifyMessage } from "ethers";
+import { verifyMessage } from "ethers";
 import bs58 from "bs58";
 
-const FIXED_GENESIS_BLOCK = {
+const FIXED_GENESIS_BLOCK: Block = {
   index: 0,
   timestamp: "1997-23-01T15:40:00.000Z",
   transaction: {
@@ -14,8 +14,11 @@ const FIXED_GENESIS_BLOCK = {
     data: "Genesis Block",
     signer: "Genesis",
     signature: "Genesis",
+    network: "Genesis",
   },
   previousHash: "0",
+  hash: "0",
+  valid: true,
   nonce: 0,
 };
 
@@ -62,7 +65,7 @@ export class BlockchainService {
     Logger.debug("Creating new block to be added in the chain");
     Logger.debug(`Data: ${JSON.stringify(data)}`);
     data.nodeId = this.identifier;
-    data.signature = this.encodeSignature(data);
+    data.network = this.getNetwork(data);
     const newBlock = new Block(data);
     newBlock.index = this.chain.length;
     newBlock.previousHash = this.getLatestBlock().hash;
@@ -70,41 +73,39 @@ export class BlockchainService {
     return minedBlock;
   }
 
-  private encodeSignature({ signer, signature, data }: any) {
-    Logger.debug(`publicKey: ${signer}`);
-    let wallet = "unknown";
+  private getNetwork({ signer, signature, data }: any) {
+    Logger.debug(`publicKey: ${signer} | signature: ${signature}`);
+
+    let network = "unknown";
     let valid = false;
-    let encodedSignature = undefined;
 
     if (!signer && signer.startsWith("0x") && signer.length === 42) {
-      wallet = "ethereum";
+      network = "ethereum";
       valid = this.verifyEthSignature(JSON.stringify(data), signature, signer);
-      encodedSignature = encodeBase58(signature);
-    }
-    try {
-      const decoded = bs58.decode(signer);
-      Logger.debug(`
+    } else {
+      try {
+        const decoded = bs58.decode(signer);
+        Logger.debug(`
         decoded: ${decoded} |
         length: ${decoded.toString().length}`);
 
-      //if (decoded.toString().length === 32) {
-      new PublicKey(signer); // throws if invalid
-      wallet = "solana";
-      valid = this.verifySolanaSignature(
-        JSON.stringify(data),
-        signature,
-        signer
-      );
-      encodedSignature = bs58.encode(signature); // Uint8Array ➡ base58
-      //}
-    } catch {
-      // Not base58 or invalid
+        //if (decoded.toString().length === 32) {
+        new PublicKey(signer); // throws if invalid
+        network = "solana";
+        valid = this.verifySolanaSignature(
+          JSON.stringify(data),
+          signature,
+          signer
+        );
+        //}
+      } catch (error) {
+        Logger.debug(`Error getting solana network: ${JSON.stringify(error)}`);
+      }
     }
-    Logger.debug(`Wallet found: ${wallet}`);
-    if (!valid) {
-      Logger.debug(`invalid`);
-    }
-    return encodedSignature;
+    Logger.debug(`Network found: ${network}`);
+    Logger.debug(`Wallet valid: ${valid}`);
+
+    return network;
   }
 
   verifyEthSignature(
@@ -201,14 +202,14 @@ export class BlockchainService {
   private generateHash({
     index,
     timestamp,
-    transation,
+    transaction,
     previousHash,
     nonce,
   }: Block): string {
     return crypto
       .createHash("sha256")
       .update(
-        index + timestamp + JSON.stringify(transation) + previousHash + nonce
+        index + timestamp + JSON.stringify(transaction) + previousHash + nonce
       )
       .digest("hex");
   }

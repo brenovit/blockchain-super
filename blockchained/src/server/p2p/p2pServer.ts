@@ -172,6 +172,12 @@ function finalizeBlockDecision() {
       `✅ Block accepted by majority: ${JSON.stringify(pendingBlock)}`
     );
     blockchain.addBlock(pendingBlock);
+
+    safePublish(Topics.BLOCKCHAIN, {
+      type: EventType.BLOCKCHAIN,
+      data: blockchain.data,
+    });
+
     safePublish(Topics.BLOCKCHAIN, {
       type: EventType.ADD_BLOCK,
       data: pendingBlock,
