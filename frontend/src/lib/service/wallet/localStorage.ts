@@ -11,13 +11,23 @@ export function getLocalStorage<T>(key: string, defaultValue: T | null = null): 
 	return defaultValue;
 }
 
-export function setLocalStorage<T>(key: string, value: T | null = null): void {
+export function setLocalStorage<T>(key: string, value: T): void {
 	try {
 		if (value === null) {
 			localStorage.removeItem(key);
 		} else {
 			localStorage.setItem(key, JSON.stringify(value));
 		}
+	} catch (error) {
+		if (typeof window !== 'undefined') {
+			console.error(error);
+		}
+	}
+}
+
+export function removeLocalStorage<T>(key: string): void {
+	try {
+		localStorage.removeItem(key);
 	} catch (error) {
 		if (typeof window !== 'undefined') {
 			console.error(error);
