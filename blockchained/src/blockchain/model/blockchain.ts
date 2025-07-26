@@ -14,6 +14,7 @@ export class Block {
   hash: string = "";
   nonce: number;
   valid: boolean;
+  errors: string[] = [];
 
   constructor(
     transaction: BlockTransaction,
@@ -27,6 +28,7 @@ export class Block {
     this.previousHash = previousHash;
     this.nonce = 0;
     this.valid = true;
+    this.errors = [];
   }
 }
 

@@ -18,8 +18,9 @@ const FIXED_GENESIS_BLOCK: Block = {
   },
   previousHash: "0",
   hash: "0",
-  valid: true,
   nonce: 0,
+  valid: true,
+  errors: [],
 };
 
 export class BlockchainService {
@@ -69,12 +70,13 @@ export class BlockchainService {
     const newBlock = new Block(data);
     newBlock.index = this.chain.length;
     newBlock.previousHash = this.getLatestBlock().hash;
-    const minedBlock = this.mine(newBlock);
+    const minedBlock = await this.mine(newBlock);
+    minedBlock.valid = this.isValidNewBlock(minedBlock);
     return minedBlock;
   }
 
   private getNetwork({ signer, signature, data }: any) {
-    Logger.debug(`publicKey: ${signer} | signature: ${signature}`);
+    //Logger.debug(`publicKey: ${signer} | signature: ${signature}`);
 
     let network = "unknown";
     let valid = false;
@@ -85,9 +87,7 @@ export class BlockchainService {
     } else {
       try {
         const decoded = bs58.decode(signer);
-        Logger.debug(`
-        decoded: ${decoded} |
-        length: ${decoded.toString().length}`);
+        //Logger.debug(`        decoded: ${decoded} |        length: ${decoded.toString().length}`);
 
         //if (decoded.toString().length === 32) {
         new PublicKey(signer); // throws if invalid
@@ -102,13 +102,13 @@ export class BlockchainService {
         Logger.debug(`Error getting solana network: ${JSON.stringify(error)}`);
       }
     }
-    Logger.debug(`Network found: ${network}`);
-    Logger.debug(`Wallet valid: ${valid}`);
+    //Logger.debug(`Network found: ${network}`);
+    //Logger.debug(`Wallet valid: ${valid}`);
 
     return network;
   }
 
-  verifyEthSignature(
+  private verifyEthSignature(
     message: string,
     signature: string,
     expectedAddress: string
@@ -121,7 +121,7 @@ export class BlockchainService {
     }
   }
 
-  verifySolanaSignature(
+  private verifySolanaSignature(
     message: string,
     signatureArray: number[],
     publicKeyStr: string
@@ -137,7 +137,7 @@ export class BlockchainService {
     Logger.info(
       `Adding block to the chain: ${newBlock.index} : ${newBlock.hash}`
     );
-    if (this.isValid(newBlock)) {
+    if (this.isValidNewBlock(newBlock)) {
       this.chain.push(newBlock);
       this.saveChain();
       this.logChain();
@@ -146,26 +146,27 @@ export class BlockchainService {
     return false;
   }
 
-  isValid(block: Block) {
-    return this.isValidNewBlock(block, this.getLatestBlock());
+  isValidNewBlock(block: Block) {
+    return this.isValid(block, this.getLatestBlock());
   }
 
-  private isValidNewBlock(newBlock: Block, previousBlock: Block) {
+  private isValid(newBlock: Block, previousBlock: Block) {
     Logger.debug(
       `Checking block is valid: ${newBlock.index} : ${newBlock.hash}`
     );
     const currentAndPreviousBlocksHaveSameHash =
       newBlock.previousHash === previousBlock.hash;
+
     const currentAndPreviousBlockHaveDifferentIndex =
       newBlock.index !== previousBlock.index;
     const currentBlockHasValidHash =
       newBlock.hash === this.generateHash(newBlock);
 
     Logger.debug(
-      `Block status: ${newBlock.index} : ${newBlock.hash}
-      | currentAndPreviousBlockHaveSameHash: ${currentAndPreviousBlocksHaveSameHash} 
-      | currentAndPreviousBlockHaveDifferentIndex: ${currentAndPreviousBlockHaveDifferentIndex}
-      | currentBlockHasValidHash: ${currentBlockHasValidHash}`
+      `Block status: ${newBlock.index} - ${newBlock.hash}
+      | Curr Prev & Prev Same Hash......: ${currentAndPreviousBlocksHaveSameHash} 
+      | Curr & Prev Different Index.....: ${currentAndPreviousBlockHaveDifferentIndex}
+      | Curr Valid Hash.................: ${currentBlockHasValidHash}`
     );
     return (
       currentAndPreviousBlocksHaveSameHash &&
@@ -238,13 +239,8 @@ export class BlockchainService {
       block.nonce++;
       block.hash = this.generateHash(block);
     }
-    this.checkValid(block);
     Logger.info(`⛏️ Mined new block: ${block.hash}`);
     return block;
-  }
-
-  private checkValid(block: Block) {
-    block.valid = block.hash == this.generateHash(block);
   }
 
   private logChain() {
@@ -257,15 +253,22 @@ export class BlockchainService {
     return this.chain[this.chain.length - 1];
   }
 
-  checkChainValid(blockchain: Blockchain) {
+  getChainStatus(blockchain: Blockchain) {
     const errors: string[] = [];
-    if (blockchain && blockchain.chain) {
-      for (let i = 0; i < blockchain.chain.length; i++) {
-        const currentBlock = blockchain.chain[i];
-        const previousBlock = blockchain.chain[i - 1];
+    const convertedChain = blockchain.chain;
+    if (blockchain && convertedChain) {
+      for (let i = 1; i < convertedChain.length; i++) {
+        const currentBlock = convertedChain[i];
+        const previousBlock = convertedChain[i - 1];
 
-        if (!currentBlock.valid) {
+        if (!this.isValid(currentBlock, previousBlock)) {
           errors.push(
+            `The block #${
+              currentBlock.index
+            } is invalid. Calculated hash: ${this.generateHash(currentBlock)}`
+          );
+          convertedChain[i].valid = false;
+          convertedChain[i].errors.push(
             `The block #${
               currentBlock.index
             } is invalid. Calculated hash: ${this.generateHash(currentBlock)}`
@@ -276,6 +279,12 @@ export class BlockchainService {
           errors.push(
             `The block #${currentBlock.index} is pointing to an inexistent block. The hash does not match with previous block #${previousBlock.index}`
           );
+          convertedChain[i].valid = false;
+          convertedChain[i].errors.push(
+            `The block #${
+              currentBlock.index
+            } is invalid. Calculated hash: ${this.generateHash(currentBlock)}`
+          );
         }
       }
     }
@@ -284,6 +293,9 @@ export class BlockchainService {
       errors: errors,
     };
   }
+  /*convertChain(blockchain: Blockchain): LogicalBlock[] {
+    return blockchain.chain.map((block) => new LogicalBlock(block));
+  }*/
 
   private saveChain() {
     this.storage.saveData(this._blockchain);
@@ -304,7 +316,7 @@ export class BlockchainService {
   get data() {
     return {
       chain: this.chain,
-      status: this.checkChainValid(this._blockchain),
+      status: this.getChainStatus(this._blockchain),
       difficulty: this.difficulty,
     };
   }

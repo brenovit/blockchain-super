@@ -113,8 +113,8 @@ function handleBlockchainUpdate(newChain: Blockchain) {
     `🔄 Received blockchain update with ${newChain?.chain?.length} blocks`
   );
 
-  const isValidChain = blockchain.checkChainValid(newChain);
-  if (isValidChain) {
+  const chain = blockchain.getChainStatus(newChain);
+  if (chain.valid) {
     blockchain.loadChainFromNetwork(newChain);
     Logger.info(`✅ Blockchain updated successfully`);
   } else {
@@ -209,7 +209,7 @@ function handleBlockchainVoteResponse(data: any) {
 function handleVoteRequest(data: any) {
   Logger.info(`📩 Received vote request for block: ${data.block.hash}`);
 
-  const isValid = blockchain.isValid(data.block);
+  const isValid = blockchain.isValidNewBlock(data.block);
   safePublish(Topics.BLOCKCHAIN_VOTE, {
     type: EventType.VOTE_RESPONSE,
     data: {
