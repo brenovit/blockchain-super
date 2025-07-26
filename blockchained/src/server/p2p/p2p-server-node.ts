@@ -9,7 +9,7 @@ import { mdns } from "@libp2p/mdns";
 import { NodeEvent, NodeMessage } from "../node-event.js";
 import crypto from "crypto";
 import { TopicName, Topics } from "./p2p-topic.js";
-import { checkIfMasterNodeDisconnected } from "./election-flow.js";
+import { checkIfMainNodeDisconnected } from "./election-flow.js";
 
 type MessageId = string | null;
 
@@ -17,7 +17,7 @@ const receivedEventIds = new Set<MessageId>(); // ✅ Track processed messages
 
 const node = await createLibp2p({
   addresses: {
-    listen: ["/ip4/127.0.0.1/tcp/0/ws"], // Listen on a random available port
+    listen: ["/ip4/0.0.0.0/tcp/0/ws"], // Listen on a random available port
   },
   transports: [webSockets()],
   connectionEncrypters: [noise()],
@@ -32,9 +32,11 @@ const node = await createLibp2p({
 await node.start();
 
 // Subscribe to Topics
-await node.services.pubsub.subscribe(Topics.BLOCKCHAIN);
-await node.services.pubsub.subscribe(Topics.BLOCKCHAIN_VOTE);
-await node.services.pubsub.subscribe(Topics.NETWORK_LEADER_ELECTION);
+
+for (const topic of Object.values(Topics)) {
+  await node.services.pubsub.subscribe(topic);
+  Logger.info(`✅ Subscribed to topic: ${topic}`);
+}
 
 export const MY_ID = node.peerId.toString();
 Logger.info(`🚀 libp2p Node started: ${MY_ID}`);
@@ -55,7 +57,7 @@ node.addEventListener("peer:disconnect", (event) => {
   const peerId = event.detail.toString();
   Logger.info(`❌ Peer disconnected: ${peerId}`);
   //totalPeers -= 1;
-  checkIfMasterNodeDisconnected(peerId);
+  checkIfMainNodeDisconnected(peerId);
 });
 
 function getSubscribers(topic: TopicName) {

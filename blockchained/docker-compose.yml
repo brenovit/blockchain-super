@@ -1,0 +1,37 @@
+services:
+  server1:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: blockchain-server-1
+    command: sh -c "npm run build && node dist/server/p2p/p2pServer.js 1"
+    volumes:
+      - ./data:/usr/src/app/data
+    environment:
+      - LIBP2P_ANNOUNCE_HOST=blockchain-server-1
+
+  server2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: blockchain-server-2
+    command: sh -c "npm run build && node dist/server/p2p/p2pServer.js 2"
+    volumes:
+      - ./data:/usr/src/app/data
+    environment:
+      - LIBP2P_ANNOUNCE_HOST=blockchain-server-2
+
+  client:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: blockchain-client
+    command: sh -c "npm run build && node dist/server/p2p/p2pClient.js"
+    ports:
+      - "5000:5000"
+    environment:
+      - LIBP2P_ANNOUNCE_HOST=blockchain-client
+
+networks:
+  default:
+    driver: bridge

@@ -13,8 +13,8 @@ import { Topics } from "./p2p-topic.js";
 import {
   handleElection,
   handleElectionVoteResponse,
-  handleMasterAnnouncement,
-  isMaster,
+  handleMainAnnouncement,
+  isMain,
 } from "./election-flow.js";
 
 const INITIAL_ID = 1;
@@ -49,8 +49,8 @@ function handleEvent(message: any) {
   );
 
   switch (event.type) {
-    case EventType.MASTER_ANNOUNCEMENT:
-      handleMasterAnnouncement(event.data, blockchain.data);
+    case EventType.MAIN_NODE_ANNOUNCEMENT:
+      handleMainAnnouncement(event.data, blockchain.data);
       break;
     case EventType.ELECTION:
       handleElection(event.data);
@@ -88,8 +88,8 @@ function handleEvent(message: any) {
 }
 
 function handleSyncNodes(sender: any) {
-  if (isMaster()) {
-    Logger.info(`🚀 Master node requested to send blockchain from ${sender}`);
+  if (isMain()) {
+    Logger.info(`🚀 Main node requested to send blockchain from ${sender}`);
 
     safePublish(Topics.BLOCKCHAIN, {
       type: EventType.BLOCKCHAIN_UPDATE,
@@ -99,7 +99,7 @@ function handleSyncNodes(sender: any) {
 }
 
 function broadcastBlockchain() {
-  if (isMaster()) {
+  if (isMain()) {
     Logger.trace(`📡 Broadcasting blockchain...`);
     safePublish(Topics.BLOCKCHAIN, {
       type: EventType.BLOCKCHAIN,

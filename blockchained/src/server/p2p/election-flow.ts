@@ -4,22 +4,20 @@ import { getSubscribers, MY_ID, safePublish } from "./p2p-server-node.js";
 import { Topics } from "./p2p-topic.js";
 import { v4 as uuidv4 } from "uuid";
 
-let _isMaster = false; // Tracks if the node is master
-let currentMasterId: string | null = null; // Stores the current master node ID
+let _isMain = false; // Tracks if the node is main
+let currentMainId: string | null = null; // Stores the current main node ID
 
-//============= START: Elect master node (leader-election)
-function checkIfMasterNodeDisconnected(peerId: string) {
-  if (currentMasterId === peerId) {
-    Logger.warn(
-      `🚨 Master node ${peerId} has disconnected. 🗳️ Erasing master id`
-    );
-    currentMasterId = null;
+//============= START: Elect main node (leader-election)
+function checkIfMainNodeDisconnected(peerId: string) {
+  if (currentMainId === peerId) {
+    Logger.warn(`🚨 Main node ${peerId} has disconnected. 🗳️ Erasing main id`);
+    currentMainId = null;
   }
 }
 
-function handleMasterAnnouncement(masterId: any, blockchain: any) {
-  setNodeAsMaster(masterId);
-  if (_isMaster) {
+function handleMainAnnouncement(mainId: any, blockchain: any) {
+  setNodeAsMain(mainId);
+  if (_isMain) {
     safePublish(Topics.BLOCKCHAIN, {
       type: EventType.BLOCKCHAIN_UPDATE,
       data: blockchain,
@@ -29,16 +27,16 @@ function handleMasterAnnouncement(masterId: any, blockchain: any) {
 
 function handleElection(data: any) {
   Logger.debug(`🗳️ Starting election...`);
-  if (_isMaster) {
-    Logger.debug(`👑 I am already the new master: ${MY_ID}`);
+  if (_isMain) {
+    Logger.debug(`👑 I am already the new main: ${MY_ID}`);
     safePublish(Topics.NETWORK_LEADER_ELECTION, {
-      type: EventType.MASTER_ANNOUNCEMENT,
+      type: EventType.MAIN_NODE_ANNOUNCEMENT,
       data: MY_ID,
     });
-    return; // Skip if already master
+    return; // Skip if already main
   }
 
-  if (!currentMasterId) {
+  if (!currentMainId) {
     trackElectionRound(data);
   }
 }
@@ -62,10 +60,10 @@ function handleElectionVoteResponse(data: any) {
       const [electedId] = sortedCandidates[0];
 
       if (electedId === MY_ID) {
-        Logger.info(`✅ You have been elected master with tie-breaker!`);
-        electNodeAsMaster(MY_ID);
+        Logger.info(`✅ You have been elected main with tie-breaker!`);
+        electNodeAsMain(MY_ID);
       } else {
-        Logger.info(`👑 ${electedId} is elected as master (you lost).`);
+        Logger.info(`👑 ${electedId} is elected as main (you lost).`);
       }
 
       activeElectionRound = null;
@@ -117,7 +115,7 @@ function startElection() {
 
   //Wait before starting election
   setTimeout(() => {
-    if (!currentMasterId) {
+    if (!currentMainId) {
       const roundId = uuidv4();
       Logger.debug(`🎭 Starting leader election round: ${roundId}...`);
 
@@ -134,42 +132,42 @@ function startElection() {
   }, delay);
 }
 
-function electNodeAsMaster(nodeId: string) {
-  setNodeAsMaster(nodeId);
+function electNodeAsMain(nodeId: string) {
+  setNodeAsMain(nodeId);
   safePublish(Topics.NETWORK_LEADER_ELECTION, {
-    type: EventType.MASTER_ANNOUNCEMENT,
+    type: EventType.MAIN_NODE_ANNOUNCEMENT,
     data: nodeId,
   });
 }
 
-function setNodeAsMaster(nodeId: string) {
-  currentMasterId = nodeId;
-  _isMaster = currentMasterId === MY_ID;
-  if (_isMaster) {
-    Logger.debug(`👑 I am the new master: ${nodeId}`);
+function setNodeAsMain(nodeId: string) {
+  currentMainId = nodeId;
+  _isMain = currentMainId === MY_ID;
+  if (_isMain) {
+    Logger.debug(`👑 I am the new main: ${nodeId}`);
   } else {
-    Logger.debug(`🫡 I elect the new master: ${nodeId}`);
+    Logger.debug(`🫡 I elect the new main: ${nodeId}`);
   }
 }
 
-function isMaster() {
-  return _isMaster;
+function isMain() {
+  return _isMain;
 }
 
-// Check for master failure every 5 seconds
+// Check for main failure every 5 seconds
 setInterval(() => {
-  if (_isMaster) return; // Skip if already master
-  if (!currentMasterId) {
-    Logger.debug("🚨 Master node is missing, starting election...");
+  if (_isMain) return; // Skip if already main
+  if (!currentMainId) {
+    Logger.debug("🚨 Main node is missing, starting election...");
     startElection();
   }
 }, 5000);
-//============= STOP: Elect master node (leader-election)
+//============= STOP: Elect main node (leader-election)
 
 export {
   handleElection,
-  handleMasterAnnouncement,
+  handleMainAnnouncement,
   handleElectionVoteResponse,
-  checkIfMasterNodeDisconnected,
-  isMaster,
+  checkIfMainNodeDisconnected,
+  isMain,
 };

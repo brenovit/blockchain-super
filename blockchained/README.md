@@ -74,7 +74,7 @@ node run client
        - Discover and connect to peers.
        - Sync the blockchain with other nodes.
        - Broadcast new blocks.
-       - Elect a master node.
+       - Elect a main node.
        - Mine and vote for the block.
        - Connects to all topics availables
      - Client node:
