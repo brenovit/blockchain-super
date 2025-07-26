@@ -40,7 +40,7 @@ export type BlockchainReceiveEvent = {
 };
 
 export type BlockchainEventType =
-	| 'MASTER_ANNOUNCEMENT'
+	| 'MAIN_NODE_ANNOUNCEMENT'
 	| 'ELECTION'
 	| 'REQUEST_SYNC_BLOCKCHAIN'
 	| 'BLOCKCHAIN_UPDATE'

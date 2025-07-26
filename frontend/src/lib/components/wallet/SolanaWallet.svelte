@@ -11,6 +11,7 @@
 	import type { WalletData } from '$lib/service/wallet';
 
 	let modalRef: Modal;
+	let showModal = false;
 
 	let wallets: WalletData[] = [];
 
@@ -39,7 +40,7 @@
 <ConnectWallet chain="solana" {connect} {disconnect} />
 
 <!-- Modal Component -->
-<Modal bind:this={modalRef} id="walletModal" title="Select a Wallet">
+<Modal isOpen={showModal} close={() => (showModal = false)} title="Select a Wallet">
 	<div slot="body">
 		{#each wallets as wallet}
 			<button

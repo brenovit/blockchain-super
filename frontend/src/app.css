@@ -1,0 +1,23 @@
+@import '@fortawesome/fontawesome-free/css/all.min.css';
+@import 'tailwindcss';
+@plugin '@tailwindcss/forms';
+@plugin '@tailwindcss/typography';
+
+.highlighted-section {
+    outline: 2px solid #3F20FB;
+    background-color: rgba(63, 32, 251, 0.1);
+}
+
+.edit-button {
+    position: absolute;
+    z-index: 1000;
+}
+
+::-webkit-scrollbar {
+    display: none;
+}
+
+html, body {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}

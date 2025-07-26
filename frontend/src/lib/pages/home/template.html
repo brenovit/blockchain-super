@@ -1,0 +1,415 @@
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script> window.FontAwesomeConfig = {autoReplaceSvg: 'nest'};</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous"
+            referrerpolicy="no-referrer"></script>
+
+    <style>
+        ::-webkit-scrollbar {
+            display: none;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+    <script>tailwind.config = {
+        "theme": {
+            "extend": {
+                "fontFamily": {
+                    "inter": [
+                        "Inter",
+                        "sans-serif"
+                    ],
+                    "sans": [
+                        "Inter",
+                        "sans-serif"
+                    ]
+                }
+            }
+        }
+    };</script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+    <link rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;500;600;700;800;900&amp;display=swap">
+    <style>
+        .highlighted-section {
+            outline: 2px solid #3F20FB;
+            background-color: rgba(63, 32, 251, 0.1);
+        }
+
+        .edit-button {
+            position: absolute;
+            z-index: 1000;
+        }
+
+        ::-webkit-scrollbar {
+            display: none;
+        }
+
+        html, body {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans">
+
+<!-- Header -->
+
+<!-- Main Content -->
+<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+
+        <!-- Node Summary Panel -->
+        <div id="node-summary" class="lg:col-span-1 space-y-6">
+            <!-- Node Status Card -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div class="flex items-center space-x-2 mb-4">
+                    <i class="fa-solid fa-server text-blue-600"></i>
+                    <h2 class="text-lg font-semibold text-gray-900">Node Status</h2>
+                </div>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="text-xs font-medium text-gray-500 uppercase tracking-wide">Peer ID</label>
+                        <p class="text-sm font-mono text-gray-900 mt-1">12D3KooWGzxzKZYv...R7tQ</p>
+                    </div>
+
+                    <div>
+                        <label class="text-xs font-medium text-gray-500 uppercase tracking-wide">Status</label>
+                        <div class="flex items-center space-x-2 mt-1">
+                            <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+                            <span class="text-sm text-green-700 font-medium">Active</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="text-xs font-medium text-gray-500 uppercase tracking-wide">Active
+                            Connections</label>
+                        <p class="text-2xl font-bold text-gray-900 mt-1">8</p>
+                    </div>
+
+                    <div>
+                        <label class="text-xs font-medium text-gray-500 uppercase tracking-wide">Network</label>
+                        <div class="flex items-center space-x-2 mt-1">
+                            <i class="fa-brands fa-ethereum text-blue-600 text-sm"></i>
+                            <span class="text-sm text-gray-700">Ethereum</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Create Block Card -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div class="flex items-center space-x-2 mb-4">
+                    <i class="fa-solid fa-plus text-green-600"></i>
+                    <h2 class="text-lg font-semibold text-gray-900">Create Block</h2>
+                </div>
+
+                <form class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Network</label>
+                        <select class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                            <option>Ethereum</option>
+                            <option>Solana</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Block Data</label>
+                        <textarea
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm h-24 resize-none"
+                                placeholder="{&quot;transaction&quot;: &quot;transfer&quot;, &quot;amount&quot;: 100, &quot;from&quot;: &quot;0x123...&quot;, &quot;to&quot;: &quot;0x456...&quot;}"></textarea>
+                        <p class="text-xs text-gray-500 mt-1">Enter JSON data for the block</p>
+                    </div>
+
+                    <button type="submit"
+                            class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg font-medium transition-colors text-sm">
+                        <i class="fa-solid fa-cube mr-2"></i>
+                        Create Block
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Blockchain Display -->
+        <div id="blockchain-display" class="lg:col-span-3">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+                <div class="p-6 border-b border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-2">
+                            <i class="fa-solid fa-link text-blue-600"></i>
+                            <h2 class="text-lg font-semibold text-gray-900">Blockchain</h2>
+                        </div>
+                        <span class="text-sm text-gray-500">12 blocks</span>
+                    </div>
+                </div>
+
+                <div id="blocks-container" class="p-6 max-h-96 overflow-y-auto space-y-4">
+                    <!-- Block 1 -->
+                    <div class="block-card bg-gray-50 rounded-lg p-4 border border-gray-200 hover:shadow-md transition-shadow cursor-pointer"
+                         onclick="openBlockModal(1)">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center space-x-2">
+                                <span class="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded">Block #1</span>
+                                <span class="bg-purple-100 text-purple-800 text-xs font-medium px-2 py-1 rounded">Ethereum</span>
+                            </div>
+                            <span class="text-xs text-gray-500">2 min ago</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                                <span class="text-gray-500">Hash:</span>
+                                <p class="font-mono text-gray-900 truncate">
+                                    0x7f9fade1c0d57a7af66ab4ead79fade1c0d57a7af66ab4ead7c2c2eb7b11a91385</p>
+                            </div>
+                            <div>
+                                <span class="text-gray-500">Nonce:</span>
+                                <p class="font-mono text-gray-900">15847</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Block 2 -->
+                    <div class="block-card bg-gray-50 rounded-lg p-4 border border-gray-200 hover:shadow-md transition-shadow cursor-pointer"
+                         onclick="openBlockModal(2)">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center space-x-2">
+                                <span class="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded">Block #2</span>
+                                <span class="bg-orange-100 text-orange-800 text-xs font-medium px-2 py-1 rounded">Solana</span>
+                            </div>
+                            <span class="text-xs text-gray-500">5 min ago</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                                <span class="text-gray-500">Hash:</span>
+                                <p class="font-mono text-gray-900 truncate">
+                                    0x8a1fade2c1d58a8af67ab5ead80fade2c1d58a8af67ab5ead8c3c3eb8b22a92486</p>
+                            </div>
+                            <div>
+                                <span class="text-gray-500">Nonce:</span>
+                                <p class="font-mono text-gray-900">23956</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Block 3 -->
+                    <div class="block-card bg-gray-50 rounded-lg p-4 border border-gray-200 hover:shadow-md transition-shadow cursor-pointer"
+                         onclick="openBlockModal(3)">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center space-x-2">
+                                <span class="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded">Block #3</span>
+                                <span class="bg-purple-100 text-purple-800 text-xs font-medium px-2 py-1 rounded">Ethereum</span>
+                            </div>
+                            <span class="text-xs text-gray-500">8 min ago</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                                <span class="text-gray-500">Hash:</span>
+                                <p class="font-mono text-gray-900 truncate">
+                                    0x9b2fade3c2d59b9af68ab6ead81fade3c2d59b9af68ab6ead9d4d4eb9c33a93587</p>
+                            </div>
+                            <div>
+                                <span class="text-gray-500">Nonce:</span>
+                                <p class="font-mono text-gray-900">31204</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<!-- Block Details Modal -->
+<div id="block-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div class="p-6 border-b border-gray-200">
+            <div class="flex items-center justify-between">
+                <h3 class="text-xl font-semibold text-gray-900">Block Details</h3>
+                <button onclick="closeBlockModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fa-solid fa-times text-xl"></i>
+                </button>
+            </div>
+        </div>
+        <div id="modal-content"
+             class="fixed left-0 top-0 h-full w-96 bg-white shadow-2xl border-r border-gray-200 transform -translate-x-full transition-transform duration-300 ease-in-out z-50 overflow-y-auto">
+            <div class="sticky top-0 bg-white border-b border-gray-200 p-6">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xl font-semibold text-gray-900">Block Details</h3>
+                    <button onclick="closeBlockPanel()"
+                            class="text-gray-400 hover:text-gray-600 p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                        <i class="fa-solid fa-times text-lg"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div id="panel-content" class="p-6 space-y-6">
+                <div class="grid grid-cols-1 gap-6">
+                    <div class="bg-blue-50 p-4 rounded-lg">
+                        <label class="text-sm font-medium text-blue-700">Block Index</label>
+                        <p class="text-2xl font-bold text-blue-900 mt-1">#1</p>
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium text-gray-500">Network</label>
+                        <div class="flex items-center space-x-2 mt-2 p-3 bg-gray-50 rounded-lg">
+                            <i class="fa-brands fa-ethereum text-blue-600 text-lg"></i>
+                            <span class="text-gray-900 font-medium">Ethereum</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="text-sm font-medium text-gray-500">Hash</label>
+                    <div class="mt-2 p-3 bg-gray-50 rounded-lg border">
+                        <p class="font-mono text-sm text-gray-900 break-all">
+                            0x7f9fade1c0d57a7af66ab4ead79fade1c0d57a7af66ab4ead7c2c2eb7b11a91385</p>
+                        <button class="text-blue-600 hover:text-blue-700 text-xs mt-1 flex items-center space-x-1">
+                            <i class="fa-solid fa-copy"></i>
+                            <span>Copy</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="text-sm font-medium text-gray-500">Previous Hash</label>
+                    <div class="mt-2 p-3 bg-gray-50 rounded-lg border">
+                        <p class="font-mono text-sm text-gray-900 break-all">
+                            0x6e8fade0c0d56a6af65ab3ead78fade0c0d56a6af65ab3ead6b1b1eb6a00a80274</p>
+                        <button class="text-blue-600 hover:text-blue-700 text-xs mt-1 flex items-center space-x-1">
+                            <i class="fa-solid fa-copy"></i>
+                            <span>Copy</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-green-50 p-4 rounded-lg">
+                        <label class="text-sm font-medium text-green-700">Nonce</label>
+                        <p class="font-mono text-lg font-bold text-green-900 mt-1">15847</p>
+                    </div>
+                    <div class="bg-purple-50 p-4 rounded-lg">
+                        <label class="text-sm font-medium text-purple-700">Timestamp</label>
+                        <p class="text-sm font-semibold text-purple-900 mt-1">2024-01-15<br>14:32:18</p>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="text-sm font-medium text-gray-500">Node ID</label>
+                    <div class="mt-2 p-3 bg-gray-50 rounded-lg border">
+                        <p class="font-mono text-sm text-gray-900">12D3KooWGzxzKZYveHMVto4S4ameCFuFZK4QRrMV5R7tQ</p>
+                        <button class="text-blue-600 hover:text-blue-700 text-xs mt-1 flex items-center space-x-1">
+                            <i class="fa-solid fa-copy"></i>
+                            <span>Copy</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="text-sm font-medium text-gray-500">Signer</label>
+                    <div class="mt-2 p-3 bg-gray-50 rounded-lg border">
+                        <p class="font-mono text-sm text-gray-900">0x742d35Cc6634C0532925a3b8D0B251732C4E8d35</p>
+                        <button class="text-blue-600 hover:text-blue-700 text-xs mt-1 flex items-center space-x-1">
+                            <i class="fa-solid fa-copy"></i>
+                            <span>Copy</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="text-sm font-medium text-gray-500">Signature</label>
+                    <div class="mt-2 p-3 bg-gray-50 rounded-lg border">
+                        <p class="font-mono text-sm text-gray-900 break-all">
+                            0x1b4f47894c2e5f8a9d3b6e1c4a7f2b8e5d9c3a6f1e4b7a0d2f5c8e1a4b7d0c3f6a9e2b5d8c1f4a7b0e3c6f9d2a5b8e1c4f7a0d3b6e9c2f5a8d1b4e7c0f3a6b9e2d5c8f1a4b7e0d3c6a9f2b5e8d1c4a7f0b3e6c9f2a5d8e1b4c7a0f3d6b9e2c5f8a1d4b7e0c3f6a9d2b5c8f1e4a7b0d3c6f9e2a5d8c1b4f7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a5d8c1f4b7a0e3d6c9f2b5a8e1d4c7f0b3a6e9d2c5f8b1e4a7d0c3f6b9e2a</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Block Modal -->
+<div id="create-block-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-xl shadow-2xl max-w-lg w-full mx-4">
+        <div class="p-6 border-b border-gray-200">
+            <div class="flex items-center justify-between">
+                <h3 class="text-xl font-semibold text-gray-900">Create New Block</h3>
+                <button onclick="closeCreateBlockModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fa-solid fa-times text-xl"></i>
+                </button>
+            </div>
+        </div>
+        <form class="p-6 space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Network</label>
+                <select class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <option>Ethereum</option>
+                    <option>Solana</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Block Data</label>
+                <textarea
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 h-32"
+                        placeholder="{&quot;transaction&quot;: &quot;transfer&quot;, &quot;amount&quot;: 100}"></textarea>
+            </div>
+            <div class="flex space-x-3 pt-4">
+                <button type="button" onclick="closeCreateBlockModal()"
+                        class="flex-1 px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
+                    Cancel
+                </button>
+                <button type="submit"
+                        class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                    Create Block
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Wallet dropdown toggle
+    document.getElementById('wallet-dropdown').addEventListener('click', function () {
+        const menu = document.getElementById('wallet-menu');
+        menu.classList.toggle('hidden');
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function (event) {
+        const dropdown = document.getElementById('wallet-dropdown');
+        const menu = document.getElementById('wallet-menu');
+        if (!dropdown.contains(event.target)) {
+            menu.classList.add('hidden');
+        }
+    });
+
+    // Block modal functions
+    function openBlockModal(blockId) {
+        document.getElementById('block-modal').classList.remove('hidden');
+        document.getElementById('block-modal').classList.add('flex');
+    }
+
+    function closeBlockModal() {
+        document.getElementById('block-modal').classList.add('hidden');
+        document.getElementById('block-modal').classList.remove('flex');
+    }
+
+    // Create block modal functions
+    document.getElementById('create-block-btn').addEventListener('click', function () {
+        document.getElementById('create-block-modal').classList.remove('hidden');
+        document.getElementById('create-block-modal').classList.add('flex');
+    });
+
+    function closeCreateBlockModal() {
+        document.getElementById('create-block-modal').classList.add('hidden');
+        document.getElementById('create-block-modal').classList.remove('flex');
+    }
+</script>
+
+
+</body>
+</html>
