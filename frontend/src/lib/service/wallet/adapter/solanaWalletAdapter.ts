@@ -20,7 +20,8 @@ export function listWallets(): WalletData[] {
 		connected: false,
 		chain: chainType,
 		publicKey: null,
-		signMessage: signMessage
+		signMessage: signMessage,
+		disconnect: disconnectWallet
 	}));
 }
 
@@ -46,7 +47,8 @@ export async function connectToWallet(walletName: string) {
 		logo: wallet.icon,
 		name: walletName,
 		chain: chainType,
-		signMessage: signMessage
+		signMessage: signMessage,
+		disconnect: disconnectWallet
 	});
 }
 
@@ -83,6 +85,7 @@ export async function disconnectWallet() {
 		name: null,
 		chain: null,
 		logo: null,
-		signMessage: signMessage
+		signMessage: signMessage,
+		disconnect: disconnectWallet
 	});
 }

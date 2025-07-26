@@ -7,4 +7,5 @@ export interface WalletData {
 	publicKey: string | null;
 	connected: boolean;
 	signMessage(message: string): Promise<string>;
+	disconnect(): void;
 }

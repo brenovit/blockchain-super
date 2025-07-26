@@ -1,19 +1,5 @@
-<script lang="ts">
-	import BlockList from '$lib/components/block/BlockList.svelte';
-	import { BlockchainServer } from '$lib/service/blockchain/blockchain-server';
-	import type { BlockchainStatus } from '$lib/service/blockchain/model/blockchain';
-	import { walletStore } from '$lib/store/walletStore';
-	import type { WalletData } from '$lib/service/wallet';
+<script>
 	import WalletConnection from './WalletConnection.svelte';
-
-	let blockChainStatus: BlockchainStatus = { valid: true, errors: [] };
-	let connectedWallet: WalletData;
-
-	walletStore.subscribe((value) => {
-		connectedWallet = value;
-	});
-
-	const server = BlockchainServer.getInstance();
 </script>
 
 <header id="header" class="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
@@ -26,7 +12,6 @@
 				</div>
 			</div>
 
-			<!-- Wallet Connection Panel -->
 			<WalletConnection />
 		</div>
 	</div>
