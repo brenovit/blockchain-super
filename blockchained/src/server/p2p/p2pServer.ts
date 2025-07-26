@@ -132,7 +132,7 @@ async function handleCreateBlock(blockData: any) {
   const newBlock = await blockchain.createBlock(blockData);
 
   if (newBlock.valid) {
-    pendingBlock = newBlock;
+    pendingBlock = newBlock as Block;
 
     votes = {};
     Logger.info(`🗳️ Requesting votes for new block: ${newBlock.hash}`);

@@ -1,7 +1,7 @@
 import crypto from "crypto";
 import { StorageService } from "../storage/storage-service.js";
 import { Logger } from "../../utils/logger.js";
-import { Block, Blockchain } from "../model/blockchain.js";
+import { Block, Blockchain, LogicalBlock } from "../model/blockchain.js";
 import { PublicKey } from "@solana/web3.js";
 import { verifyMessage } from "ethers";
 import bs58 from "bs58";
@@ -19,8 +19,6 @@ const FIXED_GENESIS_BLOCK: Block = {
   previousHash: "0",
   hash: "0",
   nonce: 0,
-  valid: true,
-  errors: [],
 };
 
 export class BlockchainService {
@@ -62,7 +60,7 @@ export class BlockchainService {
     this.saveChain();
   }
 
-  async createBlock(data: any): Promise<Block> {
+  async createBlock(data: any): Promise<LogicalBlock> {
     Logger.debug("Creating new block to be added in the chain");
     Logger.debug(`Data: ${JSON.stringify(data)}`);
     data.nodeId = this.identifier;
@@ -71,8 +69,7 @@ export class BlockchainService {
     newBlock.index = this.chain.length;
     newBlock.previousHash = this.getLatestBlock().hash;
     const minedBlock = await this.mine(newBlock);
-    minedBlock.valid = this.isValidNewBlock(minedBlock);
-    return minedBlock;
+    return new LogicalBlock(minedBlock);
   }
 
   private getNetwork({ signer, signature, data }: any) {
@@ -255,7 +252,7 @@ export class BlockchainService {
 
   getChainStatus(blockchain: Blockchain) {
     const errors: string[] = [];
-    const convertedChain = blockchain.chain;
+    const convertedChain = this.convertChain(blockchain);
     if (blockchain && convertedChain) {
       for (let i = 1; i < convertedChain.length; i++) {
         const currentBlock = convertedChain[i];
@@ -293,9 +290,9 @@ export class BlockchainService {
       errors: errors,
     };
   }
-  /*convertChain(blockchain: Blockchain): LogicalBlock[] {
+  convertChain(blockchain: Blockchain): LogicalBlock[] {
     return blockchain.chain.map((block) => new LogicalBlock(block));
-  }*/
+  }
 
   private saveChain() {
     this.storage.saveData(this._blockchain);
