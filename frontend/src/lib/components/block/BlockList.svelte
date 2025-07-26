@@ -19,7 +19,7 @@
 				<i class="fa-solid fa-link text-blue-600"></i>
 				<h2 class="text-lg font-semibold text-gray-900">Blockchain</h2>
 			</div>
-			<span class="text-sm text-gray-500">12 blocks</span>
+			<span class="text-sm text-gray-500">{blockchain.length} blocks</span>
 		</div>
 	</div>
 

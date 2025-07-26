@@ -83,6 +83,18 @@
 						{block.previousHash}
 					</p>
 				</div>
+
+				<div>
+					<label class="text-sm font-medium text-gray-500">Block Errors</label>
+					<div class="mt-2 space-y-2">
+						<div
+							class="flex items-center space-x-2 bg-green-50 border border-green-200 rounded-lg p-3"
+						>
+							<i class="fa-solid fa-check-circle text-green-600 text-sm"></i>
+							<span class="text-sm text-green-800 font-medium">No validation errors detected</span>
+						</div>
+					</div>
+				</div>
 			</div>
 		{:else}
 			<div class="text-center py-12 text-gray-400">

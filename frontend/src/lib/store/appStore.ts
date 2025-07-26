@@ -1,9 +1,13 @@
 import { writable } from 'svelte/store';
 
 interface AppStore {
-	clientId: string;
+	nodeId: string;
+	peerId: string;
+	activeConnections: string;
 }
 
 export const appStore = writable<AppStore>({
-	clientId: ''
+	nodeId: '',
+	peerId: '',
+	activeConnections: ''
 });

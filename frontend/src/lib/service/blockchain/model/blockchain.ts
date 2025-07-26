@@ -24,8 +24,8 @@ export interface Block {
 	hash: string;
 	nonce: number;
 	valid: boolean;
-	signer: string;
-	signature: string;
+	//signer: string;
+	//signature: string;
 }
 
 export type BlockchainSendEvent = {
