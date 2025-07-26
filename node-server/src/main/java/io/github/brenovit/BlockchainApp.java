@@ -1,122 +1,119 @@
 package io.github.brenovit;
 
-import io.vertx.core.*;
+import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.json.JsonObject;
-import io.vertx.spi.cluster.hazelcast.HazelcastClusterManager;
 import io.vertx.core.spi.cluster.ClusterManager;
+import io.vertx.ext.web.Router;
+import io.vertx.ext.web.handler.BodyHandler;
+import io.vertx.spi.cluster.hazelcast.HazelcastClusterManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.time.Instant;
-import java.util.*;
+import java.util.Random;
+import java.util.UUID;
 
 public class BlockchainApp {
 
+    private static final Logger log
+            = LoggerFactory.getLogger(BlockchainApp.class);
+
     public static void main(String[] args) {
-        String role = System.getenv().getOrDefault("NODE_ROLE", "slave").toLowerCase();
+        log.info("Starting BlockchainApp");
+        var role = System.getenv().get("NODE_ROLE");
+        var httpServerEnabled = Boolean.getBoolean(System.getenv().getOrDefault("HTTP_SERVER_ENABLED", "false"));
+
+        if(role == null) {
+            throw new RuntimeException("Node role is not set");
+        }
         boolean isMaster = role.equals("master");
 
         ClusterManager mgr = new HazelcastClusterManager();
-        VertxOptions options = new VertxOptions().setClusterManager(mgr);
 
-        Vertx.clusteredVertx(options, res -> {
-            if (res.succeeded()) {
-                Vertx vertx = res.result();
-                EventBus bus = vertx.eventBus();
-                Blockchain blockchain = new Blockchain();
+        var f = Vertx.builder()
+                .withClusterManager(mgr)
+                .buildClustered();
 
-                // Master node creates the genesis block only
-                if (isMaster) {
-                    System.out.println("[Master] Initializing blockchain with genesis block...");
-                    blockchain.initGenesis();
-                }
+        if (f.succeeded()) {
+            Vertx vertx = f.result();
+            
+            log.info("Cluster manager started");
+            EventBus bus = vertx.eventBus();
+            Blockchain blockchain = new Blockchain();
 
-                // Register to receive new transactions
-                bus.consumer("blockchain.transaction", message -> {
-                    JsonObject tx = (JsonObject) message.body();
-                    blockchain.addTransaction(tx.encode());
-                    System.out.println("[" + role.toUpperCase() + "] Received tx: " + tx.encodePrettily());
-                });
-
-                // Register to receive new blocks
-                bus.consumer("blockchain.block", message -> {
-                    JsonObject block = (JsonObject) message.body();
-                    blockchain.addBlock(block);
-                    System.out.println("[" + role.toUpperCase() + "] Received block: " + block.encodePrettily());
-                });
-
-                // All nodes mine blocks
-                vertx.setPeriodic(15000, id -> {
-                    if (!blockchain.getPendingTransactions().isEmpty()) {
-                        JsonObject newBlock = blockchain.mineBlock();
-                        bus.publish("blockchain.block", newBlock);
-                        System.out.println("[" + role.toUpperCase() + "] Mined & broadcasted block");
-                    }
-                });
-
-                // Optional: simulate submitting a transaction (slaves only)
-                if (!isMaster) {
-                    vertx.setPeriodic(10000, id -> {
-                        JsonObject tx = new JsonObject()
-                                .put("from", UUID.randomUUID().toString().substring(0, 5))
-                                .put("to", UUID.randomUUID().toString().substring(0, 5))
-                                .put("amount", new Random().nextInt(100));
-                        bus.publish("blockchain.transaction", tx);
-                    });
-                }
+            // Master node creates the genesis block only
+            if (isMaster) {
+                log.info("[Master] Initializing blockchain with genesis block...");
+                blockchain.initGenesis();
             }
-        });
-    }
-}
 
-class Blockchain {
-    private List<JsonObject> chain = new ArrayList<>();
-    private List<String> pendingTransactions = new ArrayList<>();
-    private boolean initialized = false;
+            // Register to receive new transactions
+            bus.consumer("blockchain.transaction", message -> {
+                JsonObject tx = (JsonObject) message.body();
+                blockchain.addTransaction(tx.encode());
+                log.info("[" + role.toUpperCase() + "] Received tx: " + tx.encodePrettily());
+            });
 
-    public void initGenesis() {
-        if (!initialized) {
-            chain.add(createGenesisBlock());
-            initialized = true;
+            // Register to receive new blocks
+            bus.consumer("blockchain.block", message -> {
+                JsonObject block = (JsonObject) message.body();
+                blockchain.addBlock(block);
+                log.info("[" + role.toUpperCase() + "] Received block: " + block.encodePrettily());
+            });
+
+            // All nodes mine blocks
+            vertx.setPeriodic(15000, id -> {
+                if (!blockchain.getPendingTransactions().isEmpty()) {
+                    JsonObject newBlock = blockchain.mineBlock();
+                    bus.publish("blockchain.block", newBlock);
+                    log.info("[" + role.toUpperCase() + "] Mined & broadcasted block");
+                }
+            });
+
+            // Optional: simulate submitting a transaction (slaves only)
+            if (!isMaster) {
+                vertx.setPeriodic(10000, id -> {
+                    JsonObject tx = new JsonObject()
+                            .put("from", UUID.randomUUID().toString().substring(0, 5))
+                            .put("to", UUID.randomUUID().toString().substring(0, 5))
+                            .put("amount", new Random().nextInt(100));
+                    bus.publish("blockchain.transaction", tx);
+                });
+            }
+
+            if(httpServerEnabled) {
+                log.info("Starting HTTP server");
+
+                // HTTP API
+                Router router = Router.router(vertx);
+                router.route().handler(BodyHandler.create());
+
+                router.get("/blocks").handler(ctx -> {
+                    ctx.response()
+                            .putHeader("Content-Type", "application/json")
+                            .end(blockchain.getChain().toString());
+                });
+
+                router.post("/transactions").handler(ctx -> {
+                    JsonObject tx = ctx.body().asJsonObject();
+                    bus.publish("blockchain.transaction", tx);
+                    ctx.response().setStatusCode(202).end("Transaction accepted\n");
+                });
+
+                vertx.createHttpServer()
+                        .requestHandler(router)
+                        .listen(8080)
+                        .onSuccess(server -> log.info("HTTP server running on port 8080"))
+                        .onFailure(err -> log.error("HTTP server failed: {}", err.getMessage()));
+                log.info("Http server started on port 8080");
+
+            }
+        }
+
+        if(f.failed()){
+            throw new RuntimeException("[BlockchainApp] failed to start");
         }
     }
-
-    public JsonObject createGenesisBlock() {
-        return new JsonObject()
-                .put("index", 0)
-                .put("timestamp", Instant.now().toString())
-                .put("transactions", new ArrayList<>())
-                .put("previousHash", "0")
-                .put("hash", UUID.randomUUID().toString());
-    }
-
-    public void addTransaction(String tx) {
-        pendingTransactions.add(tx);
-    }
-
-    public List<String> getPendingTransactions() {
-        return pendingTransactions;
-    }
-
-    public JsonObject mineBlock() {
-        JsonObject lastBlock = chain.get(chain.size() - 1);
-        JsonObject block = new JsonObject()
-                .put("index", chain.size())
-                .put("timestamp", Instant.now().toString())
-                .put("transactions", new ArrayList<>(pendingTransactions))
-                .put("previousHash", lastBlock.getString("hash"))
-                .put("hash", UUID.randomUUID().toString());
-
-        chain.add(block);
-        pendingTransactions.clear();
-        return block;
-    }
-
-    public void addBlock(JsonObject block) {
-        chain.add(block);
-    }
-
-    public List<JsonObject> getChain() {
-        return chain;
-    }
 }
+
 
